@@ -50,7 +50,7 @@ public class HelicopterPartsUI : MonoBehaviour
     private void Hook()
     {
         if (gm != null) return;
-        gm = GameManager.Instance ?? FindObjectOfType<GameManager>();
+        gm = GameManager.Instance ?? FindFirstObjectByType<GameManager>();
         if (!gm) return;
 
         if (applyDesiredToGameManager)

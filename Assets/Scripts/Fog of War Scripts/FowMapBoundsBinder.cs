@@ -134,7 +134,7 @@ public class FowMapBoundsBinder : MonoBehaviour
 
         if (bindOnMapCompleted)
         {
-            _mapGen = FindObjectOfType<RandomMapGenerator>();
+            _mapGen = FindFirstObjectByType<RandomMapGenerator>();
             if (_mapGen != null)
             {
                 _mapGen.OnMapCompleted += HandleMapCompleted;
@@ -437,7 +437,7 @@ public class FowMapBoundsBinder : MonoBehaviour
     static bool TryLargestRendererBounds(out Bounds best)
     {
         best = default;
-        var all = Object.FindObjectsOfType<Renderer>();
+        var all = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         float bestArea = -1f;
         bool found = false;
         for (int i = 0; i < all.Length; i++)

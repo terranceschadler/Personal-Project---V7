@@ -525,7 +525,7 @@ public class EscPauseUI : MonoBehaviour
     /// </summary>
     private void EnsureEventSystem_ForceOld()
     {
-        var es = FindObjectOfType<EventSystem>();
+        var es = FindFirstObjectByType<EventSystem>();
         if (es == null)
         {
             var esGO = new GameObject("EventSystem", typeof(EventSystem));

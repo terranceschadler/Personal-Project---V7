@@ -677,8 +677,12 @@ public class FriendlyAI : MonoBehaviour
         Quaternion rot = Quaternion.LookRotation(dir, Vector3.up);
         GameObject bullet = Instantiate(bulletPrefab, firePoint.position, rot);
 
+        // FIXED: Ensure the bullet's Rigidbody is NOT kinematic before setting velocity
         if (bullet.TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.isKinematic = false;  // Make sure it's non-kinematic so we can use velocity
             rb.linearVelocity = rot * Vector3.forward * bulletSpeed;
+        }
 
         if (bullet.TryGetComponent<Bullet>(out var bulletScript))
         {

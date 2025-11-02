@@ -67,7 +67,7 @@ public class RandomMapGenerator : MonoBehaviour
     {
         if (!Application.isPlaying) return;
 
-        if (!runtimeBaker) runtimeBaker = FindObjectOfType<NavMeshRuntimeBaker>();
+        if (!runtimeBaker) runtimeBaker = FindFirstObjectByType<NavMeshRuntimeBaker>();
 
         // Wire baker to wait for THIS generator
         if (runtimeBaker)

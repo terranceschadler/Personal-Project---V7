@@ -534,7 +534,7 @@ public class DeathUIController : MonoBehaviour
     // ---------------- EventSystem ----------------
     private void EnsureEventSystem()
     {
-        var es = FindObjectOfType<EventSystem>();
+        var es = FindFirstObjectByType<EventSystem>();
         if (es == null)
         {
             var esGO = new GameObject("EventSystem", typeof(RectTransform), typeof(EventSystem));

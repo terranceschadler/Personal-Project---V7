@@ -231,7 +231,7 @@ public class StatsUIController : MonoBehaviour
     // =====================================================================
     private void EnsureCanvas()
     {
-        if (targetCanvas == null) targetCanvas = UnityEngine.Object.FindObjectOfType<Canvas>();
+        if (targetCanvas == null) targetCanvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
         if (targetCanvas == null)
         {
             var canvasGO = new GameObject("HUD Canvas (Auto)");
@@ -245,7 +245,7 @@ public class StatsUIController : MonoBehaviour
 
             canvasGO.AddComponent<GraphicRaycaster>();
 
-            if (UnityEngine.Object.FindObjectOfType<EventSystem>() == null)
+            if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() == null)
             {
                 var es = new GameObject("EventSystem");
                 es.AddComponent<EventSystem>();
@@ -483,7 +483,7 @@ public class StatsUIController : MonoBehaviour
     private void MoveHelicopterRowToBottomAndPin()
     {
         if (!panelRoot) return;
-        var heli = UnityEngine.Object.FindObjectOfType<HelicopterPartsUI>(true);
+        var heli = UnityEngine.Object.FindFirstObjectByType<HelicopterPartsUI>(FindObjectsInactive.Include);
         if (!heli) return;
 
         var row = heli.GetComponent<RectTransform>();

@@ -66,7 +66,7 @@ public class UIBootstrapper : MonoBehaviour
     private static void EnsureCanvasAndEventSystem()
     {
         // Canvas
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             Debug.Log("[UIBootstrapper] No Canvas found. Creating a default Screen Space - Overlay Canvas.");
@@ -81,7 +81,7 @@ public class UIBootstrapper : MonoBehaviour
         }
 
         // EventSystem
-        EventSystem es = FindObjectOfType<EventSystem>();
+        EventSystem es = FindFirstObjectByType<EventSystem>();
         if (es == null)
         {
             Debug.Log("[UIBootstrapper] No EventSystem found. Creating one.");
