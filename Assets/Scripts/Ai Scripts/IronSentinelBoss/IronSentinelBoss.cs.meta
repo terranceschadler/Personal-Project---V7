@@ -1,0 +1,30 @@
+fileFormatVersion: 2
+guid: 112b8a06911697f4290187bd8251b1fc
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - coinPrefab: {fileID: 2734191600132634701, guid: 040793db376723149868613c2f37a640, type: 3}
+  - healthLootPrefab: {fileID: 6441928423980564283, guid: defe7e944ff3be643bc95304bb708c46, type: 3}
+  - attackPlayerClip: {instanceID: 0}
+  - attackFriendlyClip: {instanceID: 0}
+  - attackBarricadeClip: {instanceID: 0}
+  - healthBar: {fileID: 2908771961093391236, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
+  - healthBarRoot: {fileID: 2543480615067215807, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
+  - healthPickupPrefab: {fileID: 6441928423980564283, guid: cab0018b27cc99241b165ca69af30271, type: 3}
+  - weaponPickupPrefab: {instanceID: 0}
+  - spawner: {instanceID: 0}
+  - bossHealthBarPrefab: {fileID: 5536732270004585410, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
+  - turretPrefab: {instanceID: 0}
+  - missilePrefab: {instanceID: 0}
+  - shieldDomePrefab: {instanceID: 0}
+  - sfx: {instanceID: 0}
+  - fortifySfx: {instanceID: 0}
+  - uprootSfx: {instanceID: 0}
+  - deployTurretSfx: {instanceID: 0}
+  - barrageSfx: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

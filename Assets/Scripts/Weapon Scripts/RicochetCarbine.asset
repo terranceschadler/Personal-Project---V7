@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce34580cb2354f14194c74f194751384, type: 3}
+  m_Name: RicochetCarbine
+  m_EditorClassIdentifier: 
+  weaponName: RicochetCarbine
+  bulletPrefab: {fileID: 7306740024211373334, guid: 146cee65d2607d8438aae252e5465898, type: 3}
+  fireRate: 5
+  bulletSpeed: 30
+  bulletsPerShot: 1
+  spreadAngle: 0
+  maxBounces: 3
+  speedLossPerBounce: 0.15
+  damageLossPerBounce: 0.25
+  ricochetSurfaces:
+    serializedVersion: 2
+    m_Bits: 32768
+  enemyLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  ignoreLayers:
+    serializedVersion: 2
+    m_Bits: 13088
+  biasRicochetTowardTargets: 1
+  ricochetAimCone: 15
+  ricochetTargetSearchRadius: 15
+  maxLifeSeconds: 6
+  minSpeedToContinue: 6
+  bounceVfxPrefab: {fileID: 0}
+  bounceSfx: {fileID: 0}

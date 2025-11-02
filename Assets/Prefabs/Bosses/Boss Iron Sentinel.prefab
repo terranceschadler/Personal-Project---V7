@@ -1,0 +1,534 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6660566260431963420
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2138431232573231010}
+  - component: {fileID: 7206768016729180388}
+  - component: {fileID: 74610759551411013}
+  - component: {fileID: 6033625186569121236}
+  m_Layer: 6
+  m_Name: Boss mesh
+  m_TagString: BossEnemy
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2138431232573231010
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6660566260431963420}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 8752079934984417731}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &7206768016729180388
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6660566260431963420}
+  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &74610759551411013
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6660566260431963420}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 6f01c3d826eaa7d4bab2bdd3b0aff8d6, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!136 &6033625186569121236
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6660566260431963420}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &8752079934984417734
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8752079934984417731}
+  - component: {fileID: 8752079934984417730}
+  - component: {fileID: 8752079934984417733}
+  - component: {fileID: 334781418977222669}
+  - component: {fileID: 1976334186942458147}
+  - component: {fileID: 8752079934984417728}
+  - component: {fileID: 2553693985541995790}
+  - component: {fileID: 372233281035989678}
+  - component: {fileID: 7145936899755026895}
+  - component: {fileID: 3029104990724073955}
+  - component: {fileID: 4851924283678538750}
+  - component: {fileID: 2457628791622162698}
+  - component: {fileID: 3993335458739819612}
+  - component: {fileID: -8896771719340017671}
+  m_Layer: 6
+  m_Name: Boss Iron Sentinel
+  m_TagString: BossEnemy
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8752079934984417731
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 20, z: 27.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 2138431232573231010}
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &8752079934984417730
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &8752079934984417733
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 0
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 6f01c3d826eaa7d4bab2bdd3b0aff8d6, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!135 &334781418977222669
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!136 &1976334186942458147
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!195 &8752079934984417728
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 3.5
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0.8
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 1
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
+--- !u!54 &2553693985541995790
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  serializedVersion: 2
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 1
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 112
+  m_CollisionDetection: 0
+--- !u!114 &372233281035989678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d388c9f16b5878438d98e3ec9c39251, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!82 &7145936899755026895
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &3029104990724073955
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d10d7259bccfe9644bf2cad88f8a2b58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  setBossTagIfMissing: 1
+  disableSelfAfterStart: 1
+  destroySelfAfterStart: 0
+  showDebugLogs: 1
+--- !u!114 &4851924283678538750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab2b739e047977d4cb731e1835d780e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visualRoot: {fileID: 2138431232573231010}
+  preferCharacterController: 0
+  preferCapsuleCollider: 1
+  extraFootPadding: 0
+  logComputed: 1
+--- !u!114 &2457628791622162698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67be21b8e363f1f4baf41459e2ba131e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visualRoot: {fileID: 2138431232573231010}
+  feetMarkers: []
+  deferFrames: 1
+  alignOnce: 1
+  keepAligned: 0
+  extraPadding: 0
+  log: 1
+--- !u!114 &3993335458739819612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 112b8a06911697f4290187bd8251b1fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 500
+  chaseRange: 10
+  damageAmount: 25
+  damageRate: 0.5
+  wanderRadius: 15
+  wanderInterval: 5
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopBuffer: 0.8
+  targetRefreshInterval: 0.35
+  losRaycastHeight: 0.5
+  useProximityAttacks: 1
+  contactDamageRadius: 1.15
+  coinPrefab: {fileID: 2734191600132634701, guid: 040793db376723149868613c2f37a640, type: 3}
+  coinDropChance: 0.5
+  minCoins: 1
+  maxCoins: 3
+  healthLootPrefab: {fileID: 6441928423980564283, guid: defe7e944ff3be643bc95304bb708c46, type: 3}
+  healthLootChance: 0.25
+  minHealthDrops: 1
+  maxHealthDrops: 1
+  killScore: 10
+  coinsOnKillAward: 0
+  materialsOnKillAward: 0
+  attackPlayerClip: {fileID: 0}
+  attackFriendlyClip: {fileID: 0}
+  attackBarricadeClip: {fileID: 0}
+  attackVolume: 0.7
+  attackPitchRange: {x: 0.97, y: 1.03}
+  spatial3D: 1
+  minAttackSfxInterval: 0.12
+  healthBar: {fileID: 2908771961093391236, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
+  healthBarRoot: {fileID: 2543480615067215807, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
+  bossHealthBarSize: {x: 300, y: 35}
+  bossBarForceAbsoluteSizing: 1
+  bossBarScaleMultiplier: 1
+  zombiePrefabs:
+  - {fileID: 3171248502968128322, guid: 3c830cd2ca81c6944a0935e98e2418d2, type: 3}
+  specialAttackCooldown: 10
+  spawnRadius: 5
+  bossScale: 5
+  bossHealth: 500
+  bossDamage: 25
+  patrolRadius: 10
+  patrolInterval: 5
+  returnThreshold: 2
+  healthPickupPrefab: {fileID: 6441928423980564283, guid: cab0018b27cc99241b165ca69af30271, type: 3}
+  weaponPickupPrefab: {fileID: 0}
+  spawner: {fileID: 0}
+  bossHealthBarPrefab: {fileID: 5536732270004585410, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
+  healthBarLocalOffset: {x: 0, y: 3, z: 0}
+  maintainScaleIndependentOfBoss: 1
+  tiltWithCamera: 1
+  barWorldWidth: 2
+  barWorldHeight: 0.18
+  healthBarWorldScale: 0.02
+  normalizeHierarchyScales: 1
+  spawnInvulnSeconds: 0.75
+  restrictToAllowedInstigators: 1
+  allowedInstigatorTags:
+  - Player
+  - FriendlyAI
+  diagLogs: 0
+  worldMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  eyeHeight: 1.8
+  forceFortifyOnSpawn: 0
+  forceFortifiedDuration: 8
+  mobileDuration: 7.5
+  fortifyWindup: 0.9
+  fortifiedDuration: 10
+  uprootWinddown: 0.9
+  fortifiedDamageMultiplier: 0.3
+  rearWeakpointMultiplier: 1.4
+  rearArcDegrees: 120
+  turretPrefab: {fileID: 7273663303649013536, guid: 537d90b96238b2f49ad925f1400c8931, type: 3}
+  turretCount: 2
+  turretRingRadius: 4.5
+  minTurretSeparationDeg: 45
+  turretSpawnInterval: 0.2
+  barrageOrderCooldown: 2.5
+  shieldDomePrefab: {fileID: 1968910830238010419, guid: 3be3b03f0e277a34e9a3262f4d552b3e, type: 3}
+  shieldDomeLocalOffset: {x: 0, y: 0, z: 0}
+  shieldDomeDelay: 0.25
+  sfx: {fileID: 0}
+  fortifySfx: {fileID: 0}
+  uprootSfx: {fileID: 0}
+  deployTurretSfx: {fileID: 0}
+  barrageSfx: {fileID: 0}
+--- !u!114 &-8896771719340017671
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8752079934984417734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d988a2b4b9866874c94ab00d0827808a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sampleMaxDistance: 5
+  warpOntoMesh: 1
+  recheckEveryFrameUntilReady: 1
