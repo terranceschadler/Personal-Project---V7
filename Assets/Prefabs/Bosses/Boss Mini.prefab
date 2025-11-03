@@ -380,7 +380,7 @@ MonoBehaviour:
   - {fileID: 6441928423980564283, guid: cab0018b27cc99241b165ca69af30271, type: 3}
   additionalLootCount: 2
   fallbackLootSpawnRadius: 2
-  debugLogs: 1
+  debugLogs: 0
 --- !u!114 &2824275960644675723
 MonoBehaviour:
   m_ObjectHideFlags: 0

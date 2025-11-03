@@ -23,8 +23,10 @@ public class HelicopterPartsUI : MonoBehaviour
     private void Awake()
     {
         if (!partsText) partsText = GetComponentInChildren<Text>(true);
+        if (partsText) partsText.alignment = TextAnchor.MiddleLeft;
 #if TMP_PRESENT || TEXTMESHPRO || TMPRO
         if (!partsTMP) partsTMP = GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
+        if (partsTMP) partsTMP.alignment = TMPro.TextAlignmentOptions.Left;
 #endif
     }
 
