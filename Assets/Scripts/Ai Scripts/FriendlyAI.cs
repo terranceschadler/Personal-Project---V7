@@ -727,7 +727,13 @@ public class FriendlyAI : MonoBehaviour
     public void Heal(float amount)
     {
         if (amount <= 0f) return;
+        
+        float oldHealth = currentHealth;
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        float actualHealed = currentHealth - oldHealth;
+        
+        Debug.Log($"[FriendlyAI] ★ '{gameObject.name}' picked up HEALTH PICKUP: +{actualHealed:F1} HP (was {oldHealth:F1}, now {currentHealth:F1}/{maxHealth:F1})", this);
+        
         UpdateHealthBar();
     }
 

@@ -673,6 +673,20 @@ public class EnemyController : MonoBehaviour
         try { DropCoins(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropCoins threw: {ex}"); }
         try { DropHealth(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropHealth threw: {ex}"); }
 
+        // 3.5) Mini Boss special loot (if this is a mini boss)
+        try
+        {
+            var miniBoss = GetComponent<MiniBoss>();
+            if (miniBoss != null)
+            {
+                miniBoss.NotifyKilled();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[EnemyController] MiniBoss.NotifyKilled threw: {ex}");
+        }
+
         // 4) Notify external listeners LAST and SAFELY
         try
         {

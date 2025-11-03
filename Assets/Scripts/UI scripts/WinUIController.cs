@@ -611,7 +611,7 @@ public class WinUIController : MonoBehaviour
     // ---------------- EventSystem ----------------
     private void EnsureEventSystem()
     {
-        var es = FindObjectOfType<EventSystem>();
+        var es = FindFirstOrAnyObjectByType<EventSystem>();
         if (es == null)
         {
             var esGO = new GameObject("EventSystem",
@@ -638,6 +638,18 @@ public class WinUIController : MonoBehaviour
 #else
         if (es.GetComponent<StandaloneInputModule>() == null)
             es.gameObject.AddComponent<StandaloneInputModule>();
+#endif
+    }
+
+    // -------- Version-safe finder (avoids obsolete warnings) --------
+    private static T FindFirstOrAnyObjectByType<T>() where T : UnityEngine.Object
+    {
+#if UNITY_2023_1_OR_NEWER
+        return UnityEngine.Object.FindFirstObjectByType<T>();
+#elif UNITY_2022_2_OR_NEWER
+        return UnityEngine.Object.FindFirstObjectByType<T>();
+#else
+        return UnityEngine.Object.FindObjectOfType<T>();
 #endif
     }
 }

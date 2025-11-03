@@ -113,14 +113,11 @@ public class TopDownGamepadDriver : MonoBehaviour
     {
         if (GamepadInput.Start_Pressed)
         {
-            // If you use EscPauseUI from our previous work, call its toggle
-            var esc = GameObject.FindObjectOfType<EscPauseUI>();
+            // Updated to non-deprecated API
+            var esc = FindFirstObjectByType<EscPauseUI>();
             if (esc != null)
             {
-                // Simulate ESC by calling a public method if you exposed it;
-                // otherwise just send KeyCode.Escape to your input logic.
-                // As a fallback, toggle Time.timeScale.
-                // Here we'll simulate ESC key behavior by toggling timescale + cursor:
+                // Simulate ESC by toggling timescale + cursor (or call your esc method if you have one)
                 bool pausing = Time.timeScale > 0.5f;
                 Time.timeScale = pausing ? 0f : 1f;
                 Cursor.lockState = pausing ? CursorLockMode.None : CursorLockMode.Locked;
@@ -128,8 +125,7 @@ public class TopDownGamepadDriver : MonoBehaviour
             }
             else
             {
-                // fallback: send Escape
-                // (If your pause script listens to Input.GetKeyDown(KeyCode.Escape) in Update, it will catch this.)
+                // fallback: send Escape (handled elsewhere if you listen for it)
             }
         }
     }

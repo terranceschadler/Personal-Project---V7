@@ -394,7 +394,13 @@ public class HelicopterTrigger : MonoBehaviour
         }
 
         // 2) Count ALL friendlies currently following the player, anywhere on the map.
-        var allBehaviours = FindObjectsOfType<MonoBehaviour>(includeInactive: false);
+        MonoBehaviour[] allBehaviours;
+#if UNITY_2023_1_OR_NEWER
+        allBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+#else
+        allBehaviours = FindObjectsOfType<MonoBehaviour>(includeInactive: false);
+#endif
+
         for (int i = 0; i < allBehaviours.Length; i++)
         {
             var comp = allBehaviours[i];

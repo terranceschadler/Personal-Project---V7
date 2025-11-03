@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 3066291027016180138}
   - component: {fileID: 2824275960644675723}
   - component: {fileID: 7799806472653759700}
+  - component: {fileID: 1713388489087104242}
   m_Layer: 6
   m_Name: Boss Mini
   m_TagString: Enemy
@@ -34,13 +35,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3171248502968128322}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4459351867363614451}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!135 &2609458142248651543
 SphereCollider:
@@ -50,9 +52,17 @@ SphereCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3171248502968128322}
   m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
   m_IsTrigger: 1
+  m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
+  serializedVersion: 3
   m_Radius: 1
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!136 &5627936691736808359
@@ -63,8 +73,17 @@ CapsuleCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3171248502968128322}
   m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
   m_IsTrigger: 0
+  m_ProvidesContacts: 0
   m_Enabled: 1
+  serializedVersion: 2
   m_Radius: 0.5
   m_Height: 2
   m_Direction: 1
@@ -147,10 +166,21 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3171248502968128322}
-  serializedVersion: 2
+  serializedVersion: 5
   m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 1
   m_Interpolate: 0
@@ -178,7 +208,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: f753640d45cad7548b90f2a9fce47c44, type: 3}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: f753640d45cad7548b90f2a9fce47c44, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0.25
   m_Pitch: 1
@@ -325,12 +356,31 @@ MonoBehaviour:
   refillCurrentHealth: 1
   applyDelayFrames: 1
   reapplyAfterStartFrames: 2
+  aggressiveBehavior: 1
+  chaseRangeMultiplier: 3
+  speedMultiplier: 1.5
+  angularSpeedMultiplier: 2
+  accelerationMultiplier: 2
+  disableWandering: 1
   autoAddAligner: 1
   alignAfterScale: 1
   alignWaitFrames: 1
   tempKeepAlignedSeconds: 0
   alignerExtraPaddingOverride: 0.05
-  debugLogs: 0
+  lootMultiplier: 3
+  extraLootRolls: 1
+  guaranteedCoinBonusRange: {x: 20, y: 50}
+  guaranteedMaterialBonusRange: {x: 10, y: 20}
+  autoHookDeathEvent: 1
+  useFallbackLoot: 1
+  coinPrefab: {fileID: 2734191600132634701, guid: 040793db376723149868613c2f37a640, type: 3}
+  minCoinsToSpawn: 3
+  maxCoinsToSpawn: 8
+  additionalLootPrefabs:
+  - {fileID: 6441928423980564283, guid: cab0018b27cc99241b165ca69af30271, type: 3}
+  additionalLootCount: 2
+  fallbackLootSpawnRadius: 2
+  debugLogs: 1
 --- !u!114 &2824275960644675723
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -365,6 +415,23 @@ MonoBehaviour:
   sampleMaxDistance: 5
   warpOntoMesh: 1
   recheckEveryFrameUntilReady: 1
+--- !u!114 &1713388489087104242
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3171248502968128322}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7818b0dee55a94d43997c2e4a55b4a1a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniBossDeathHandler
+  enemyController: {fileID: 5909923402922740409}
+  debugLogs: 0
+  onManualDeathTrigger:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &3675981718403378010
 GameObject:
   m_ObjectHideFlags: 0
@@ -391,12 +458,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3675981718403378010}
+  serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3171248502968128327}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &2354536387927103658
 MeshFilter:
@@ -417,11 +485,17 @@ MeshRenderer:
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -443,6 +517,7 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -455,8 +530,17 @@ CapsuleCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3675981718403378010}
   m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
   m_IsTrigger: 0
+  m_ProvidesContacts: 0
   m_Enabled: 1
+  serializedVersion: 2
   m_Radius: 0.5
   m_Height: 2
   m_Direction: 1

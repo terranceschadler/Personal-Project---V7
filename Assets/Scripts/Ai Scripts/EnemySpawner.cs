@@ -224,7 +224,8 @@ public class EnemySpawner : MonoBehaviour
         navReady = true;
         if (waitForNavMesh)
         {
-            baker = NavMeshRuntimeBaker.Instance ?? GameObject.FindObjectOfType<NavMeshRuntimeBaker>();
+            // CHANGED: use new API to avoid CS0618
+            baker = NavMeshRuntimeBaker.Instance ?? FindFirstObjectByType<NavMeshRuntimeBaker>();
             if (baker != null)
             {
                 navReady = baker.BakeCompleted;

@@ -56,6 +56,7 @@ public class BootOrchestrator : MonoBehaviour
         if (_bootRoutine == null) _bootRoutine = StartCoroutine(BootSequenceSafe());
     }
 
+
     private IEnumerator BootSequenceSafe()
     {
         var ie = BootSequence();
@@ -295,7 +296,28 @@ public class BootOrchestrator : MonoBehaviour
 
     private static MonoBehaviour FindObjectOfTypeByName(string typeName)
     {
+        // Prefer new API (keep “include inactive” behavior)
+#if UNITY_2023_1_OR_NEWER
+        var all = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+#elif UNITY_2022_2_OR_NEWER
+        // No includeInactive overload in many 2022 streams: use Resources and filter to scene instances.
+        var allAll = Resources.FindObjectsOfTypeAll<MonoBehaviour>();
+        var list = new System.Collections.Generic.List<MonoBehaviour>(allAll.Length);
+        for (int i = 0; i < allAll.Length; i++)
+        {
+            var mb = allAll[i];
+            if (!mb) continue;
+            var go = mb.gameObject;
+            if (go.scene.IsValid()) list.Add(mb); // exclude prefab/assets
+        }
+        var all = list.ToArray();
+
+#else
+        // Older API supports includeInactive bool directly
         var all = Object.FindObjectsOfType<MonoBehaviour>(true);
+#endif
+
         for (int i = 0; i < all.Length; i++)
         {
             var mb = all[i];

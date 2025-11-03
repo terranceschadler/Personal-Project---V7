@@ -97,7 +97,7 @@ public class NavMeshRuntimeBaker : MonoBehaviour
 
     public IEnumerator BakeAsyncSafely()
     {
-        if (!Application.isPlaying) yield break;
+        if (!Application.isPlaying) yield break; // keep consistent casing if you already fixed elsewhere
 
         // optional: wait for generator
         if (waitForGenerator && mapGenerator != null)
@@ -278,7 +278,14 @@ public class NavMeshRuntimeBaker : MonoBehaviour
     private static bool TryComputeSceneBounds(LayerMask layers, int maxColliders, out Bounds result, out int count)
     {
         result = default; count = 0;
-        var cols = FindObjectsOfType<Collider>(true);
+
+        // Include inactive so freshly spawned-but-disabled tiles still count for bounds
+#if UNITY_2023_1_OR_NEWER
+        var cols = UnityEngine.Object.FindObjectsByType<Collider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
+        var cols = UnityEngine.Object.FindObjectsOfType<Collider>(true);
+#endif
+
         bool init = false;
 
         for (int i = 0; i < cols.Length; i++)
@@ -373,7 +380,13 @@ public class NavMeshRuntimeBaker : MonoBehaviour
     private static bool AllMeshesReadable(out Mesh offender)
     {
         offender = null;
-        var filters = FindObjectsOfType<MeshFilter>(true);
+
+#if UNITY_2023_1_OR_NEWER
+        var filters = UnityEngine.Object.FindObjectsByType<MeshFilter>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
+        var filters = UnityEngine.Object.FindObjectsOfType<MeshFilter>(true);
+#endif
+
         for (int i = 0; i < filters.Length; i++)
         {
             var m = filters[i].sharedMesh;

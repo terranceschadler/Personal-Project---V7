@@ -1,4 +1,3 @@
-// SafeBoot.cs
 using UnityEngine;
 using System.Collections;
 
@@ -43,12 +42,20 @@ public class SafeBoot : MonoBehaviour
 
     private void Awake()
     {
-        // Find everything up front (includes inactive objects)
+        // --- Version-safe object discovery ---
+#if UNITY_2023_1_OR_NEWER
+        _gens = Object.FindObjectsByType<RandomMapGenerator>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        _bakers = Object.FindObjectsByType<NavMeshRuntimeBaker>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        _spawners = Object.FindObjectsByType<EnemySpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        _pauseUIs = Object.FindObjectsByType<EscPauseUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        _deathUIs = Object.FindObjectsByType<DeathUIController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
         _gens = FindObjectsOfType<RandomMapGenerator>(true);
         _bakers = FindObjectsOfType<NavMeshRuntimeBaker>(true);
         _spawners = FindObjectsOfType<EnemySpawner>(true);
         _pauseUIs = FindObjectsOfType<EscPauseUI>(true);
         _deathUIs = FindObjectsOfType<DeathUIController>(true);
+#endif
 
         if (disableMapGen) SetEnabled(_gens, false, "[SafeBoot] MapGen DISABLED");
         if (disableBaker) SetEnabled(_bakers, false, "[SafeBoot] Baker DISABLED");
@@ -112,7 +119,6 @@ public class SafeBoot : MonoBehaviour
         foreach (var b in _bakers)
         {
             if (!b) continue;
-            // Ensure baker can initialize its NavMeshData (OnEnable or EnsureDataReady in your baker)
             if (!b.enabled) b.enabled = true;
             if (!b.gameObject.activeSelf) b.gameObject.SetActive(true);
             StartCoroutine(b.BakeAsyncSafely());
@@ -158,7 +164,7 @@ public class SafeBoot : MonoBehaviour
         row("F6", "Force Resume (time/audio)", false);
 
         GUILayout.Space(6);
-        GUILayout.Label("Tips:\n• Turn systems on one by one.\n• If it crashes on F1 ? MapGen is the culprit.\n• If on F2 ? NavMesh baking.\n• On F3 ? Spawners/UI logic.", small());
+        GUILayout.Label("Tips:\n• Turn systems on one by one.\n• If it crashes on F1 ? MapGen issue.\n• If F2 ? NavMesh bake.\n• If F3 ? Spawners/UI logic.", small());
         GUILayout.EndArea();
 
         GUIStyle rich() { var s = new GUIStyle(GUI.skin.label); s.richText = true; s.fontSize = 14; return s; }

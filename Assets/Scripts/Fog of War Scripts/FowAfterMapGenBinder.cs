@@ -36,7 +36,7 @@ public class FowAfterMapGenBinder : MonoBehaviour
     void OnEnable()
     {
         if (!manager) manager = FogOfWarManager.Instance;
-        if (!mapGen) mapGen = FindObjectOfType<RandomMapGenerator>();
+        if (!mapGen) mapGen = FindFirstObjectByType<RandomMapGenerator>();
 
         if (mapGen != null)
         {
@@ -181,7 +181,7 @@ public class FowAfterMapGenBinder : MonoBehaviour
     static bool TryLargestRendererBounds(out Bounds best)
     {
         best = default;
-        var all = Object.FindObjectsOfType<Renderer>();
+        var all = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         float bestArea = -1f;
         bool found = false;
         for (int i = 0; i < all.Length; i++)

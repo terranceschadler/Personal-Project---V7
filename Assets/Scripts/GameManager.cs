@@ -478,8 +478,22 @@ public class GameManager : MonoBehaviour
     private void AutoDisableEscIfPauseUI()
     {
         if (!autoDisableEscIfPauseUI) return;
-        var escUI = UnityEngine.Object.FindObjectOfType<EscPauseUI>(true);
-        if (escUI != null && togglePauseOnEsc) togglePauseOnEsc = false;
+
+        EscPauseUI escUI = null;
+
+#if UNITY_2023_1_OR_NEWER
+        // 2023+: can include inactive objects explicitly
+        escUI = UnityEngine.Object.FindFirstObjectByType<EscPauseUI>(FindObjectsInactive.Include);
+#elif UNITY_2022_2_OR_NEWER
+        // 2022.2+: FindFirstObjectByType exists (no includeInactive overload)
+        escUI = UnityEngine.Object.FindFirstObjectByType<EscPauseUI>();
+#else
+        // Legacy API supports includeInactive bool
+        escUI = UnityEngine.Object.FindObjectOfType<EscPauseUI>(true);
+#endif
+
+        if (escUI != null && togglePauseOnEsc)
+            togglePauseOnEsc = false;
     }
 
     // ========================= Pause / Resume (no UI)

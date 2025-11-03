@@ -284,7 +284,7 @@ public class MapModeController : MonoBehaviour
         _prevLock = Cursor.lockState;
         _hadPrevCursor = Cursor.visible;
 
-        var gm = GameManager.Instance ?? GameObject.FindObjectOfType<GameManager>();
+        var gm = GameManager.Instance ?? FindGameManagerCompat();
         bool gmPaused = false;
         if (gm != null) { try { gm.PushExternalPause(); gmPaused = true; } catch { } }
         if (!gmPaused) { Time.timeScale = 0f; AudioListener.pause = true; }
@@ -327,7 +327,7 @@ public class MapModeController : MonoBehaviour
 
         _dragArmed = _dragging = false;
 
-        var gm = GameManager.Instance ?? GameObject.FindObjectOfType<GameManager>();
+        var gm = GameManager.Instance ?? FindGameManagerCompat();
         bool gmResumed = false;
         if (gm != null) { try { gm.PopExternalPause(); gmResumed = true; } catch { } }
         if (!gmResumed) { Time.timeScale = (_prevTimeScale > 0f) ? _prevTimeScale : 1f; AudioListener.pause = false; }
@@ -806,6 +806,19 @@ public class MapModeController : MonoBehaviour
             if (cursor != null && cursor.gameObject.activeSelf) cursor.gameObject.SetActive(false);
             Cursor.visible = true;
         }
+    }
+
+    // -------- Version-safe helper to find GameManager without obsolete API --------
+    private static GameManager FindGameManagerCompat()
+    {
+#if UNITY_2023_1_OR_NEWER
+        // If you want to include inactive, use the overload with FindObjectsInactive.Include
+        return UnityEngine.Object.FindFirstObjectByType<GameManager>();
+#elif UNITY_2022_2_OR_NEWER
+        return UnityEngine.Object.FindFirstObjectByType<GameManager>();
+#else
+        return UnityEngine.Object.FindObjectOfType<GameManager>();
+#endif
     }
 }
 
