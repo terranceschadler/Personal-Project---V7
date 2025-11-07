@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1889637677994214533}
   - component: {fileID: 1889637677994214530}
   - component: {fileID: 6597710786861482020}
+  - component: {fileID: -7325020240479306059}
   m_Layer: 0
   m_Name: Boss Spawner
   m_TagString: Boss
@@ -25,13 +26,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1889637677994214531}
+  serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 36.19}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2225745694359449123}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1889637677994214530
 MonoBehaviour:
@@ -50,7 +52,10 @@ MonoBehaviour:
   - {fileID: 6256002347237977288, guid: 07a520eb7b93b3244830bab3897c2435, type: 3}
   - {fileID: 8752079934984417734, guid: c0b35119ea6047249bcc9783dc0a61d6, type: 3}
   - {fileID: 3171248502968128322, guid: a26fdeed924bcb24e8fcccbad29ec163, type: 3}
-  avoidRepeatingLast: 1
+  useGlobalPool: 1
+  globalGroupId: Bosses
+  globalMode: 1
+  avoidRepeatingLastLocal: 1
   spawnOnStart: 1
   waitForNavMesh: 1
   postNavmeshDelay: 0.1
@@ -85,6 +90,26 @@ MonoBehaviour:
   areaType: 4
   iconSprite: {fileID: 0}
   iconWorldAnchor: {fileID: 1889637677994214533}
+--- !u!114 &-7325020240479306059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1889637677994214531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 920274944323b6448803df04f875cf33, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyUpgradeDropper
+  upgradeSystem: {fileID: 0}
+  dropChance: 0.15
+  dropOffset: {x: 0, y: 0.5, z: 0}
+  forceSpecificTier: 0
+  forcedTier: 0
+  isBoss: 1
+  bossDropChance: 0.8
+  bossDropsHigherTier: 1
 --- !u!1 &3074417897047756544
 GameObject:
   m_ObjectHideFlags: 0
@@ -110,12 +135,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3074417897047756544}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1889637677994214533}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &6828627124289435239
 MeshFilter:
@@ -136,11 +162,17 @@ MeshRenderer:
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -162,6 +194,7 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0

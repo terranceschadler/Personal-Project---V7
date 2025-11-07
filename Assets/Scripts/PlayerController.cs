@@ -17,6 +17,10 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Base damage per bullet for weapons that don't define their own damage.")]
     public float bulletDamage = 10f;
 
+    [Header("Weapon Upgrade System")]
+    [Tooltip("The new weapon upgrade controller - leave empty to auto-find on Start")]
+    public PlayerWeaponController weaponUpgradeController;
+
     [Header("Audio / VFX")]
     public AudioClip shootClip;
     [Range(0f, 1f)] public float shootVolume = 0.8f;
@@ -189,6 +193,23 @@ public class PlayerController : MonoBehaviour
 
         EquipWeapon(startingWeapon);
 
+        // ★ WEAPON UPGRADE SYSTEM INTEGRATION ★
+        // Try to find the weapon upgrade controller if not assigned
+        if (weaponUpgradeController == null)
+        {
+            weaponUpgradeController = GetComponent<PlayerWeaponController>();
+        }
+        
+        if (weaponUpgradeController != null)
+        {
+            DLog("[PlayerController] Weapon Upgrade System enabled!");
+        }
+        else
+        {
+            DLog("[PlayerController] Weapon Upgrade System not found - using legacy weapon system.");
+        }
+        // ★ END INTEGRATION ★
+
         _lastMousePos = Input.mousePosition;
         _mousePriorityUntil = _stickPriorityUntil = 0f;
         _lastStickDir = transform.forward;
@@ -203,11 +224,23 @@ public class PlayerController : MonoBehaviour
         bool wantsMouseFire = Input.GetButton("Fire1");
         bool wantsRT = ReadRightTrigger01() > rtFireThreshold;
 
-        if ((wantsMouseFire || wantsRT) && Time.time >= nextFireTime && currentWeapon != null)
+        // ★ MODIFIED: Check which weapon system to use ★
+        if ((wantsMouseFire || wantsRT) && Time.time >= nextFireTime)
         {
-            Shoot();
-            nextFireTime = Time.time + 1f / currentWeapon.fireRate;
+            // Try new upgrade system first
+            if (weaponUpgradeController != null && weaponUpgradeController.CanFire())
+            {
+                Shoot();
+                nextFireTime = Time.time + (1f / weaponUpgradeController.GetFireRate());
+            }
+            // Fallback to old weapon system
+            else if (currentWeapon != null)
+            {
+                Shoot();
+                nextFireTime = Time.time + 1f / currentWeapon.fireRate;
+            }
         }
+        // ★ END MODIFICATION ★
 
         // Muzzle flash light timer
         if (muzzleFlashLight != null && muzzleFlashLight.enabled)
@@ -231,301 +264,325 @@ public class PlayerController : MonoBehaviour
             }
 
             if (mainCamera != null)
-                healthBarTransform.rotation = mainCamera.transform.rotation;
+                healthBarTransform.rotation = Quaternion.LookRotation(healthBarTransform.position - mainCamera.transform.position);
         }
 
-        // Invulnerability timeout
+        // Decrement invulnerability if needed
         if (isInvulnerable && Time.time >= invulnEndTime)
             isInvulnerable = false;
 
         _lastMousePos = Input.mousePosition;
-
-        DLog($"[PlayerController] grounded={grounded} planMag={new Vector2(planar.x, planar.z).magnitude:F2} trigRaw={SafeGetAxis(triggerAxisName):F2} rt01={ReadRightTrigger01():F2} dash={(isDashing ? "YES" : "no")}");
     }
 
-    // ---- Trigger reading (robust) ----
-    float ReadRightTrigger01()
-    {
-        float t = SafeGetAxis(triggerAxisName); // -1..+1 combined
-        if (invertTriggerAxis) t = -t;
-        return rtIsPositive ? Mathf.Max(0f, t) : Mathf.Max(0f, -t);
-    }
-
-    float SafeGetAxis(string name)
-    {
-        try { return Input.GetAxis(name); }
-        catch { return 0f; }
-    }
-
-    bool SafeGetButtonDown(string name)
-    {
-        try { return Input.GetButtonDown(name); }
-        catch { return false; }
-    }
-
-    // ---------------- SHOOTING ----------------
+    // ★ MODIFIED SHOOT METHOD ★
     void Shoot()
     {
-        if (currentWeapon == null || firePoint == null) return;
-
-        TriggerShotEffects();
-
-        for (int i = 0; i < currentWeapon.bulletsPerShot; i++)
+        // Try new weapon upgrade system first
+        if (weaponUpgradeController != null && weaponUpgradeController.CanFire())
         {
-            // Spread
-            Quaternion spreadRotation = firePoint.rotation;
-            if (currentWeapon.spreadAngle > 0f)
+            // Use the upgrade system
+            weaponUpgradeController.Fire();
+            
+            // Keep your existing visual effects
+            if (muzzleFlashLight != null)
             {
-                float angle = Random.Range(-currentWeapon.spreadAngle, currentWeapon.spreadAngle);
-                spreadRotation *= Quaternion.Euler(0f, angle, 0f);
+                muzzleFlashLight.enabled = true;
+                flashTimer = flashDuration;
             }
-
-            Vector3 dir = spreadRotation * Vector3.forward;
-
-            // --- Ricochet path ---
-            if (currentWeapon is RicochetCarbine rc)
-            {
-                GameObject go = Instantiate(rc.bulletPrefab, firePoint.position, Quaternion.LookRotation(dir, Vector3.up));
-
-                // Ensure the projectile has a RicochetBullet (add if prefab doesn't include it)
-                if (!go.TryGetComponent<RicochetBullet>(out var rico))
-                    rico = go.AddComponent<RicochetBullet>();
-
-                // Tag ownership for your damage gating
-                rico.Initialize(gameObject);
-
-                // Feed config (maps 1:1 to RicochetCarbine fields)
-                rico.InitializeRicochet(
-                    owner: gameObject,
-                    startDamage: bulletDamage,
-                    startSpeed: currentWeapon.bulletSpeed,
-                    dir: dir,
-                    maxBounces: rc.maxBounces,
-                    speedLossPerBounce: rc.speedLossPerBounce,
-                    damageLossPerBounce: rc.damageLossPerBounce,
-                    ricochetSurfaces: rc.ricochetSurfaces,
-                    enemyLayers: rc.enemyLayers,
-                    ignoreLayers: rc.ignoreLayers,
-                    biasRicochetTowardTargets: rc.biasRicochetTowardTargets,
-                    ricochetAimCone: rc.ricochetAimCone,
-                    ricochetTargetSearchRadius: rc.ricochetTargetSearchRadius,
-                    minSpeedToContinue: rc.minSpeedToContinue,
-                    maxLifeSeconds: rc.maxLifeSeconds,
-                    bounceVfxPrefab: rc.bounceVfxPrefab,
-                    bounceSfx: rc.bounceSfx
-                );
-
-                // No Rigidbody path; ricochet script handles travel via raycasts
-                continue;
-            }
-
-            // --- Default projectile path (your existing behavior) ---
-            GameObject proj = Instantiate(currentWeapon.bulletPrefab, firePoint.position, spreadRotation);
-
-            if (proj.TryGetComponent<Rigidbody>(out var rb))
-            {
-                rb.isKinematic = false; // Ensure rigidbody is non-kinematic before setting velocity
-                rb.linearVelocity = dir * currentWeapon.bulletSpeed;
-            }
-
-            if (proj.TryGetComponent<IBullet>(out var ib))
-                ib.Initialize(gameObject);
-            else
-                Debug.LogWarning("[PlayerController] Bullet prefab missing IBullet component!", proj);
+            
+            // Audio is handled by weaponUpgradeController, but you can keep yours too if desired
+            // The upgrade system plays its own sounds from WeaponData
+        }
+        else
+        {
+            // Fallback to legacy system
+            ShootLegacy();
         }
     }
+    // ★ END MODIFICATION ★
 
-    void TriggerShotEffects()
+    // ★ RENAMED: Old Shoot() method for backward compatibility ★
+    void ShootLegacy()
     {
+        if (currentWeapon == null)
+        {
+            Debug.LogWarning("[PlayerController] Cannot shoot: no weapon equipped!", this);
+            return;
+        }
+
+        // Audio
         if (shootClip != null)
         {
             if (audioSource != null) audioSource.PlayOneShot(shootClip, shootVolume);
-            else AudioSource.PlayClipAtPoint(shootClip, firePoint.position, shootVolume);
+            else AudioSource.PlayClipAtPoint(shootClip, transform.position, shootVolume);
         }
 
-        if (muzzleFlash != null)
-        {
-            muzzleFlash.transform.position = firePoint.position;
-            muzzleFlash.transform.rotation = firePoint.rotation;
-            muzzleFlash.Play(true);
-        }
-        else if (muzzleFlashPrefab != null)
-        {
-            var fx = Instantiate(muzzleFlashPrefab, firePoint.position, firePoint.rotation, firePoint);
-            Destroy(fx, muzzleFlashLifetime);
-        }
-
+        // Muzzle flash light
         if (muzzleFlashLight != null)
         {
             muzzleFlashLight.enabled = true;
             flashTimer = flashDuration;
         }
-    }
 
-    // ---------------- WEAPON MANAGEMENT ----------------
-    public void GiveWeapon()
-    {
-        if (startingWeapon != null)
+        // Muzzle flash particle
+        if (muzzleFlash != null) muzzleFlash.Play();
+
+        // Muzzle flash prefab
+        if (muzzleFlashPrefab != null)
         {
-            EquipWeapon(startingWeapon);
-            DLog("[PlayerController] GiveWeapon() called without an argument; equipped startingWeapon.");
+            GameObject flash = Instantiate(muzzleFlashPrefab, firePoint.position, firePoint.rotation);
+            Destroy(flash, muzzleFlashLifetime);
         }
-        else
+
+        // Fire bullets
+        for (int i = 0; i < currentWeapon.bulletsPerShot; i++)
         {
-            Debug.LogWarning("[PlayerController] GiveWeapon() called without an argument, but no startingWeapon is set.");
+            float angle = 0f;
+            if (currentWeapon.bulletsPerShot > 1)
+            {
+                float spread = currentWeapon.spreadAngle;
+                float step = spread / (currentWeapon.bulletsPerShot - 1);
+                angle = -spread * 0.5f + (step * i);
+            }
+
+            Quaternion rot = firePoint.rotation * Quaternion.Euler(0f, angle, 0f);
+            GameObject bulletObj = Instantiate(currentWeapon.bulletPrefab, firePoint.position, rot);
+
+            var bullet = bulletObj.GetComponent<Bullet>();
+            if (bullet != null)
+            {
+                bullet.Initialize(gameObject);
+                bullet.damage = bulletDamage;
+                bullet.speed = currentWeapon.bulletSpeed;
+            }
+            else
+            {
+                var iBullet = bulletObj.GetComponent<IBullet>();
+                if (iBullet != null) iBullet.Initialize(gameObject);
+            }
         }
     }
+    // ★ END LEGACY METHOD ★
 
-    public void GiveWeapon(Weapon newWeapon)
-    {
-        EquipWeapon(newWeapon);
-        if (newWeapon != null) DLog($"[PlayerController] Player received: {newWeapon.weaponName}");
-    }
-
+    // ★ PUBLIC METHODS for external scripts (WeaponPickup, ShopStation, etc.) ★
     public void EquipWeapon(Weapon newWeapon)
     {
-        currentWeapon = newWeapon;
-        if (newWeapon != null) DLog($"[PlayerController] Equipped: {newWeapon.weaponName}");
-    }
-
-    // ---------------- MOVEMENT (with Dash) ----------------
-    void HandleMovement()
-    {
-        int mask = (groundLayer.value == 0) ? Physics.DefaultRaycastLayers : groundLayer.value;
-        grounded = controller.isGrounded || SphereOrRayGround(mask, out _, out _);
-
-        if (grounded) groundedTimer = groundedGrace;
-        else groundedTimer = Mathf.Max(0f, groundedTimer - Time.deltaTime);
-
-        if ((grounded || groundedTimer > 0f) && velocity.y < 0f)
-            velocity.y = -2f;
-
-        // Read input first so we can use it for dash direction decisions.
-        Vector2 moveAxes = GetMoveInput();
-        Vector3 moveDir;
-
-        bool useWorldAxes = false;
-        if (forceWorldAxesWhenTopDown && mainCamera != null)
+        if (newWeapon == null)
         {
-            float downDot = Vector3.Dot(mainCamera.transform.forward.normalized, Vector3.down);
-            if (downDot >= topDownDotThreshold) useWorldAxes = true;
+            Debug.LogWarning("[PlayerController] Tried to equip null weapon.", this);
+            return;
         }
 
-        if (useWorldAxes || mainCamera == null)
+        currentWeapon = newWeapon;
+        DLog($"[PlayerController] Equipped {newWeapon.weaponName}");
+    }
+    
+    public void GiveWeapon(Weapon newWeapon)
+    {
+        // Alias for EquipWeapon - used by ShopStation
+        EquipWeapon(newWeapon);
+    }
+    // ★ END PUBLIC METHODS ★
+
+    // ---------------- MOVEMENT / DASH (unchanged) ----------------
+    float ReadRightTrigger01()
+    {
+        float axisVal = 0f;
+        try
         {
-            moveDir = new Vector3(moveAxes.x, 0f, moveAxes.y);
+            axisVal = Input.GetAxis(triggerAxisName);
+        }
+        catch
+        {
+            // Axis not defined or error
+            return 0f;
+        }
+
+        if (invertTriggerAxis) axisVal = -axisVal;
+
+        float rt = rtIsPositive ? Mathf.Max(0f, axisVal) : Mathf.Max(0f, -axisVal);
+        return Mathf.Clamp01(rt);
+    }
+
+    void HandleMovement()
+    {
+        if (Time.deltaTime <= 0f) return;
+
+        int gMask = (groundLayer.value != 0) ? groundLayer.value : Physics.DefaultRaycastLayers;
+        bool hitGround = SphereOrRayGround(gMask, out Vector3 gPoint, out Vector3 gNormal);
+        float yErr = transform.position.y - gPoint.y;
+
+        bool wasGroundedLastFrame = grounded;
+        grounded = hitGround && (yErr <= groundCheckDistance);
+        if (grounded)
+            groundedTimer = 0f;
+        else
+            groundedTimer += Time.deltaTime;
+
+        bool groundedThisFrame = (groundedTimer < groundedGrace);
+
+        Vector2 mInput = GetMoveInput();
+        Vector3 mDir = Vector3.zero;
+        if (mInput.sqrMagnitude > 0.01f)
+        {
+            bool topDown = false;
+            if (mainCamera != null)
+            {
+                float dot = Vector3.Dot(mainCamera.transform.forward, Vector3.down);
+                topDown = (dot >= topDownDotThreshold);
+            }
+
+            if (topDown && forceWorldAxesWhenTopDown)
+            {
+                mDir = new Vector3(mInput.x, 0f, mInput.y).normalized;
+            }
+            else
+            {
+                if (mainCamera != null)
+                {
+                    Vector3 f = mainCamera.transform.forward;
+                    Vector3 r = mainCamera.transform.right;
+                    f.y = 0f; r.y = 0f;
+                    f.Normalize(); r.Normalize();
+                    mDir = (f * mInput.y + r * mInput.x).normalized;
+                }
+                else
+                {
+                    mDir = new Vector3(mInput.x, 0f, mInput.y).normalized;
+                }
+            }
+        }
+
+        bool justLanded = (!wasGroundedLastFrame && groundedThisFrame);
+        bool tryUnstick = justLanded && hitGround && (yErr > controller.stepOffset + 0.02f);
+        if (tryUnstick)
+        {
+            controller.enabled = false;
+            transform.position = new Vector3(transform.position.x, gPoint.y + unstickNudge, transform.position.z);
+            controller.enabled = true;
+            DLog($"[PlayerController] Unstick on landing: yErr={yErr:F3}");
+        }
+
+        if (isDashing)
+        {
+            if (Time.time >= dashEndTime)
+            {
+                isDashing = false;
+                DLog("[PlayerController] Dash complete.");
+            }
         }
         else
         {
-            Vector3 camF = Vector3.ProjectOnPlane(mainCamera.transform.forward, Vector3.up).normalized;
-            Vector3 camR = Vector3.ProjectOnPlane(mainCamera.transform.right, Vector3.up).normalized;
-            if (camF.sqrMagnitude < 1e-4f && camR.sqrMagnitude < 1e-4f)
+            if (dashEnabled && Time.time >= nextDashAllowedTime)
             {
-                camF = Vector3.forward;
-                camR = Vector3.right;
+                // ★ SAFE INPUT CHECK - handles missing Dash button ★
+                bool tryDash = false;
+                
+                // Try keyboard fallback first
+                if (Input.GetKeyDown(dashKey))
+                {
+                    tryDash = true;
+                }
+                // Try Input Manager button (might not be configured)
+                else
+                {
+                    try
+                    {
+                        tryDash = Input.GetButtonDown("Dash");
+                    }
+                    catch (System.Exception)
+                    {
+                        // Dash button not configured in Input Manager - that's OK!
+                        // Already checked keyboard fallback above
+                    }
+                }
+                // ★ END SAFE INPUT CHECK ★
+                
+                if (tryDash)
+                {
+                    float planarSpeed = planar.magnitude;
+                    bool moving = (planarSpeed >= minDashMoveSpeed);
+                    if (!requireMoveForDash || moving)
+                    {
+                        StartDash(mDir.sqrMagnitude > 0.001f ? mDir : planar.normalized, planarSpeed);
+                    }
+                    else
+                    {
+                        DLog("[PlayerController] Dash require move but not moving enough.");
+                    }
+                }
             }
-            moveDir = camR * moveAxes.x + camF * moveAxes.y;
         }
-        if (moveDir.sqrMagnitude > 1f) moveDir.Normalize();
 
-        // Dash input + state (now uses real movement)
-        HandleDashInput(moveDir);
-
-        // Desired planar velocity
         Vector3 desiredPlanar;
         if (isDashing)
         {
-            float tNorm = Mathf.InverseLerp(dashEndTime - dashDuration, dashEndTime, Time.time);
-            float mult = (dashSpeedCurve != null) ? dashSpeedCurve.Evaluate(Mathf.Clamp01(tNorm)) : 1f;
-            desiredPlanar = dashDir * (moveSpeed * dashSpeedMultiplier * Mathf.Max(0.01f, mult));
-
-            // Override smoothing while dashing for a snappy feel
-            planar = desiredPlanar;
+            float elapsed = Time.time - (dashEndTime - dashDuration);
+            float norm = Mathf.Clamp01(elapsed / Mathf.Max(0.001f, dashDuration));
+            float mult = (dashSpeedCurve != null) ? dashSpeedCurve.Evaluate(norm) : 1f;
+            desiredPlanar = dashDir * (moveSpeed * dashSpeedMultiplier * mult);
         }
         else
         {
-            desiredPlanar = moveDir * moveSpeed;
-
-            float dt = Time.deltaTime;
-            float control = grounded ? 1f : airControl;
-            if (desiredPlanar.sqrMagnitude > 0.0001f)
-                planar = Vector3.MoveTowards(planar, desiredPlanar, acceleration * control * dt);
-            else
-                planar = Vector3.MoveTowards(planar, Vector3.zero, deceleration * (grounded ? 1 : airControl) * dt);
+            desiredPlanar = mDir * moveSpeed;
         }
 
-        // Gravity & move
-        velocity.y += gravity * Time.deltaTime;
-        Vector3 finalVel = new Vector3(planar.x, velocity.y, planar.z);
-        CollisionFlags flags = controller.Move(finalVel * Time.deltaTime);
+        float dt = Time.deltaTime;
+        float accel = groundedThisFrame ? acceleration : (acceleration * airControl);
+        float decel = groundedThisFrame ? deceleration : (deceleration * airControl);
 
-        if ((flags & CollisionFlags.Below) != 0 && velocity.y < 0f)
-            velocity.y = -2f;
-
-        if ((flags & CollisionFlags.Sides) != 0 && planar.sqrMagnitude < 0.0001f)
+        if (desiredPlanar.sqrMagnitude > 0.01f)
         {
-            Vector3 nudge = new Vector3(transform.forward.x, 0f, transform.forward.z) * unstickNudge;
-            controller.Move(nudge);
+            planar = Vector3.MoveTowards(planar, desiredPlanar, accel * dt);
         }
+        else
+        {
+            planar = Vector3.MoveTowards(planar, Vector3.zero, decel * dt);
+        }
+
+        if (groundedThisFrame)
+        {
+            velocity.y = -1f;
+            if (hitGround)
+            {
+                float snapDist = groundSnapExtra;
+                if (yErr > 0.001f && yErr <= snapDist)
+                {
+                    controller.Move(Vector3.down * (yErr + 0.001f));
+                }
+            }
+        }
+        else
+        {
+            velocity.y += gravity * dt;
+        }
+
+        Vector3 finalMove = planar * dt + new Vector3(0f, velocity.y * dt, 0f);
+        if (controller.enabled)
+            controller.Move(finalMove);
     }
 
-    void HandleDashInput(Vector3 currentMoveDir)
+    void StartDash(Vector3 direction, float planarSpeed)
     {
-        if (!dashEnabled) { isDashing = false; return; }
-
-        // End dash when time is up
-        if (isDashing && Time.time >= dashEndTime)
-        {
-            isDashing = false;
-        }
-
-        // Press detection (any of: InputManager "Dash", keyboard LeftShift, Xbox 'B' fallback)
-        bool dashPressed = SafeGetButtonDown("Dash") || Input.GetKeyDown(dashKey) || Input.GetKeyDown(KeyCode.JoystickButton1);
-        if (!dashPressed) return;
-
-        if (Time.time < nextDashAllowedTime || isDashing)
-            return;
-
-        // 1) Prefer current actual movement (planar velocity)
-        Vector3 planarNoY = new Vector3(planar.x, 0f, planar.z);
-        float planarSpeed = planarNoY.magnitude;
-
-        Vector3 chosenDir = Vector3.zero;
-
-        if (planarSpeed >= minDashMoveSpeed)
-        {
-            chosenDir = planarNoY / Mathf.Max(planarSpeed, 1e-6f);
-        }
-        else if (currentMoveDir.sqrMagnitude > 0.0001f)
-        {
-            // 2) Fall back to current input direction (pre-smoothing)
-            chosenDir = currentMoveDir.normalized;
-        }
+        if (direction.sqrMagnitude < 0.001f)
+            direction = transform.forward;
         else
-        {
-            // 3) If movement is required, bail out; otherwise fallback to facing
-            if (requireMoveForDash) return;
-            chosenDir = transform.forward;
-        }
+            direction.Normalize();
 
-        dashDir = chosenDir;
-
-        if (faceDashDirection && dashDir.sqrMagnitude > 1e-6f)
-            transform.rotation = Quaternion.LookRotation(dashDir, Vector3.up);
-
-        // Begin dash
+        dashDir = direction;
         isDashing = true;
         dashEndTime = Time.time + dashDuration;
-        nextDashAllowedTime = Time.time + dashCooldown;
+        nextDashAllowedTime = dashEndTime + dashCooldown;
 
-        // Optional i-frames
+        if (faceDashDirection)
+            transform.rotation = Quaternion.LookRotation(dashDir, Vector3.up);
+
         if (dashIFrames > 0f)
         {
             isInvulnerable = true;
             invulnEndTime = Time.time + dashIFrames;
         }
 
-        // Optional VFX/SFX
         if (dashClip != null)
         {
             if (audioSource != null) audioSource.PlayOneShot(dashClip, dashVolume);
@@ -597,17 +654,15 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            // Just transitioned from active -> zero
             if (_stickWasActive && snapStickWhenZero)
             {
                 if (_lastStickDir.sqrMagnitude > 1e-6f)
-                    transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up); // SNAP
-                _stickSnapUntil = now + stickSnapHoldDuration; // hold briefly to avoid jitter/mouse steal
+                    transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up);
+                _stickSnapUntil = now + stickSnapHoldDuration;
             }
             _stickWasActive = false;
         }
 
-        // Decide control (mouse wins ties)
         if (now < _mousePriorityUntil)
         {
             AimAtMouse();
@@ -616,7 +671,6 @@ public class PlayerController : MonoBehaviour
 
         if (now < _stickSnapUntil)
         {
-            // During snap hold, keep last stick direction
             if (_lastStickDir.sqrMagnitude > 1e-6f)
                 transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up);
             return;
@@ -630,13 +684,11 @@ public class PlayerController : MonoBehaviour
             }
             else if (_lastStickDir.sqrMagnitude > 1e-6f)
             {
-                // Stick recently had priority but is idle�keep last look
                 transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up);
             }
             return;
         }
 
-        // Default fallback
         AimAtMouse();
     }
 

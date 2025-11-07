@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66c30a1a77c93284d849f017fe9cff32, type: 3}
+  m_Name: RapidFire_Uncommon
+  m_EditorClassIdentifier: Assembly-CSharp::UpgradePickup
+  pickupName: Rapid Fire
+  icon: {fileID: 0}
+  rarity: 1
+  pickupColor: {r: 0.9748427, g: 0.44067937, b: 0, a: 1}
+  particleEffectPrefab: {fileID: 0}
+  effects:
+  - upgradeType: 3
+    value: 20
+    displayName: Rapid Fire
+    description: shoots 20 percent faster
+  pickupSound: {fileID: 0}

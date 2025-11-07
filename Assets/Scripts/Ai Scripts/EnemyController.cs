@@ -673,6 +673,20 @@ public class EnemyController : MonoBehaviour
         try { DropCoins(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropCoins threw: {ex}"); }
         try { DropHealth(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropHealth threw: {ex}"); }
 
+        // 3.25) NEW: Upgrade drops (integrated upgrade system)
+        try
+        {
+            EnemyUpgradeDropper upgradeDropper = GetComponent<EnemyUpgradeDropper>();
+            if (upgradeDropper != null)
+            {
+                upgradeDropper.OnEnemyDeath();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[EnemyController] EnemyUpgradeDropper.OnEnemyDeath threw: {ex}");
+        }
+
         // 3.5) Mini Boss special loot (if this is a mini boss)
         try
         {
