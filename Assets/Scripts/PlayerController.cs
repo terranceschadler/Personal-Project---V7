@@ -154,6 +154,17 @@ public class PlayerController : MonoBehaviour
     // Public read-only for other systems
     public bool IsDashing => isDashing;
 
+    // --- Input availability probes (set in Start to avoid per-frame exceptions) ---
+    private bool triggerAxisAvailable = false;
+    private bool dashButtonAvailable = false;
+
+    // --- Grounding perf helpers (NonAlloc + throttling) ---
+    private RaycastHit[] _groundHits = new RaycastHit[2];
+    private int _groundProbeInterval = 2;     // probe every Nth frame
+    private int _groundProbeCountdown = 0;
+    private Vector3 _lastGroundPoint;
+    private Vector3 _lastGroundNormal = Vector3.up;
+
     // ---------- Debug helpers ----------
     private void DLog(string msg) { if (debugLogs) Debug.Log(msg, this); }
     private void DLogFormat(string fmt, params object[] args) { if (debugLogs) Debug.LogFormat(this, fmt, args); }
@@ -164,10 +175,11 @@ public class PlayerController : MonoBehaviour
         mainCamera = Camera.main;
         currentHealth = maxHealth;
 
-        // Unstick on spawn
-        controller.enabled = false;
-        transform.position += Vector3.up * spawnUnstickUp;
-        controller.enabled = true;
+        // Unstick on spawn WITHOUT toggling the controller (avoids tiny stalls)
+        if (spawnUnstickUp > 0f)
+        {
+            controller.Move(Vector3.up * spawnUnstickUp);
+        }
 
         // Controller tuning
         controller.minMoveDistance = 0f;
@@ -194,12 +206,10 @@ public class PlayerController : MonoBehaviour
         EquipWeapon(startingWeapon);
 
         // ★ WEAPON UPGRADE SYSTEM INTEGRATION ★
-        // Try to find the weapon upgrade controller if not assigned
         if (weaponUpgradeController == null)
         {
             weaponUpgradeController = GetComponent<PlayerWeaponController>();
         }
-        
         if (weaponUpgradeController != null)
         {
             DLog("[PlayerController] Weapon Upgrade System enabled!");
@@ -213,6 +223,15 @@ public class PlayerController : MonoBehaviour
         _lastMousePos = Input.mousePosition;
         _mousePriorityUntil = _stickPriorityUntil = 0f;
         _lastStickDir = transform.forward;
+
+        // --- Probe optional inputs ONCE (no per-frame try/catch) ---
+        try { _ = Input.GetAxis(triggerAxisName); triggerAxisAvailable = true; } catch { triggerAxisAvailable = false; }
+        try { _ = Input.GetButton("Dash"); dashButtonAvailable = true; } catch { dashButtonAvailable = false; }
+
+        // Seed ground cache to something sensible
+        _lastGroundPoint = transform.position + Vector3.down * 0.5f;
+        _lastGroundNormal = Vector3.up;
+        _groundProbeCountdown = 0;
     }
 
     void Update()
@@ -280,18 +299,14 @@ public class PlayerController : MonoBehaviour
         // Try new weapon upgrade system first
         if (weaponUpgradeController != null && weaponUpgradeController.CanFire())
         {
-            // Use the upgrade system
             weaponUpgradeController.Fire();
-            
+
             // Keep your existing visual effects
             if (muzzleFlashLight != null)
             {
                 muzzleFlashLight.enabled = true;
                 flashTimer = flashDuration;
             }
-            
-            // Audio is handled by weaponUpgradeController, but you can keep yours too if desired
-            // The upgrade system plays its own sounds from WeaponData
         }
         else
         {
@@ -376,7 +391,7 @@ public class PlayerController : MonoBehaviour
         currentWeapon = newWeapon;
         DLog($"[PlayerController] Equipped {newWeapon.weaponName}");
     }
-    
+
     public void GiveWeapon(Weapon newWeapon)
     {
         // Alias for EquipWeapon - used by ShopStation
@@ -384,20 +399,12 @@ public class PlayerController : MonoBehaviour
     }
     // ★ END PUBLIC METHODS ★
 
-    // ---------------- MOVEMENT / DASH (unchanged) ----------------
+    // ---------------- MOVEMENT / DASH ----------------
     float ReadRightTrigger01()
     {
-        float axisVal = 0f;
-        try
-        {
-            axisVal = Input.GetAxis(triggerAxisName);
-        }
-        catch
-        {
-            // Axis not defined or error
-            return 0f;
-        }
+        if (!triggerAxisAvailable) return 0f;
 
+        float axisVal = Input.GetAxis(triggerAxisName);
         if (invertTriggerAxis) axisVal = -axisVal;
 
         float rt = rtIsPositive ? Mathf.Max(0f, axisVal) : Mathf.Max(0f, -axisVal);
@@ -409,17 +416,42 @@ public class PlayerController : MonoBehaviour
         if (Time.deltaTime <= 0f) return;
 
         int gMask = (groundLayer.value != 0) ? groundLayer.value : Physics.DefaultRaycastLayers;
-        bool hitGround = SphereOrRayGround(gMask, out Vector3 gPoint, out Vector3 gNormal);
-        float yErr = transform.position.y - gPoint.y;
 
+        // ---------- Grounding (cheap first, probe when needed) ----------
+        bool ccGrounded = controller.isGrounded;
+        bool doProbe = (_groundProbeCountdown-- <= 0) || !ccGrounded;
+
+        bool hitGround = false;
+        if (doProbe)
+        {
+            _groundProbeCountdown = _groundProbeInterval;
+
+            hitGround = CapsuleGroundNonAlloc(gMask, out _lastGroundPoint, out _lastGroundNormal);
+            if (!hitGround)
+            {
+                // Thin ray fallback (still NonAlloc)
+                Ray ray = new Ray(transform.position + Vector3.up * 0.05f, Vector3.down);
+                int hitCount = Physics.RaycastNonAlloc(ray, _groundHits, groundCheckDistance + groundSnapExtra, gMask, QueryTriggerInteraction.Ignore);
+                if (hitCount > 0)
+                {
+                    _lastGroundPoint = _groundHits[0].point;
+                    _lastGroundNormal = _groundHits[0].normal;
+                    hitGround = true;
+                }
+            }
+        }
+
+        float yErrProbe = transform.position.y - _lastGroundPoint.y;
         bool wasGroundedLastFrame = grounded;
-        grounded = hitGround && (yErr <= groundCheckDistance);
-        if (grounded)
-            groundedTimer = 0f;
-        else
-            groundedTimer += Time.deltaTime;
+        grounded = ccGrounded || (hitGround && (yErrProbe <= groundCheckDistance));
 
+        if (grounded) groundedTimer = 0f; else groundedTimer += Time.deltaTime;
         bool groundedThisFrame = (groundedTimer < groundedGrace);
+
+        float yErr = transform.position.y - _lastGroundPoint.y;
+        Vector3 gPoint = _lastGroundPoint;
+        Vector3 gNormal = _lastGroundNormal;
+        // ---------------------------------------------------------------
 
         Vector2 mInput = GetMoveInput();
         Vector3 mDir = Vector3.zero;
@@ -454,13 +486,13 @@ public class PlayerController : MonoBehaviour
         }
 
         bool justLanded = (!wasGroundedLastFrame && groundedThisFrame);
-        bool tryUnstick = justLanded && hitGround && (yErr > controller.stepOffset + 0.02f);
+        bool tryUnstick = justLanded && (yErr > controller.stepOffset + 0.02f);
         if (tryUnstick)
         {
-            controller.enabled = false;
-            transform.position = new Vector3(transform.position.x, gPoint.y + unstickNudge, transform.position.z);
-            controller.enabled = true;
-            DLog($"[PlayerController] Unstick on landing: yErr={yErr:F3}");
+            // Use Move to nudge upward instead of toggling controller.enabled
+            Vector3 unstickDelta = new Vector3(0f, (gPoint.y + unstickNudge) - transform.position.y, 0f);
+            controller.Move(unstickDelta);
+            DLog($"[PlayerController] Unstick on landing (Move): yErr={yErr:F3}");
         }
 
         if (isDashing)
@@ -475,29 +507,13 @@ public class PlayerController : MonoBehaviour
         {
             if (dashEnabled && Time.time >= nextDashAllowedTime)
             {
-                // ★ SAFE INPUT CHECK - handles missing Dash button ★
-                bool tryDash = false;
-                
-                // Try keyboard fallback first
-                if (Input.GetKeyDown(dashKey))
+                // Exception-free Dash input
+                bool tryDash = Input.GetKeyDown(dashKey);
+                if (!tryDash && dashButtonAvailable)
                 {
-                    tryDash = true;
+                    tryDash = Input.GetButtonDown("Dash");
                 }
-                // Try Input Manager button (might not be configured)
-                else
-                {
-                    try
-                    {
-                        tryDash = Input.GetButtonDown("Dash");
-                    }
-                    catch (System.Exception)
-                    {
-                        // Dash button not configured in Input Manager - that's OK!
-                        // Already checked keyboard fallback above
-                    }
-                }
-                // ★ END SAFE INPUT CHECK ★
-                
+
                 if (tryDash)
                 {
                     float planarSpeed = planar.magnitude;
@@ -543,13 +559,10 @@ public class PlayerController : MonoBehaviour
         if (groundedThisFrame)
         {
             velocity.y = -1f;
-            if (hitGround)
+            float snapDist = groundSnapExtra;
+            if (yErr > 0.001f && yErr <= snapDist)
             {
-                float snapDist = groundSnapExtra;
-                if (yErr > 0.001f && yErr <= snapDist)
-                {
-                    controller.Move(Vector3.down * (yErr + 0.001f));
-                }
+                controller.Move(Vector3.down * (yErr + 0.001f));
             }
         }
         else
@@ -593,18 +606,35 @@ public class PlayerController : MonoBehaviour
         DLog($"[PlayerController] DASH dir={dashDir} speedRef={planarSpeed:F2}");
     }
 
-    bool SphereOrRayGround(int mask, out Vector3 point, out Vector3 normal)
+    // -------- Ground probe helper (NonAlloc) --------
+    bool CapsuleGroundNonAlloc(int mask, out Vector3 point, out Vector3 normal)
     {
-        Vector3 origin = transform.position + Vector3.up * 0.05f;
+        // Match the CharacterController capsule
+        Vector3 worldCenter = transform.TransformPoint(controller.center);
+        float radius = Mathf.Max(0.0001f, controller.radius - 0.01f);
+        float halfHeight = Mathf.Max(radius, controller.height * 0.5f - radius);
+
+        Vector3 top = worldCenter + Vector3.up * halfHeight;
+        Vector3 bottom = worldCenter - Vector3.up * halfHeight;
+
+        // Cast a short distance downward
         float dist = groundCheckDistance + groundSnapExtra;
 
-        if (Physics.SphereCast(origin, groundCheckRadius, Vector3.down, out RaycastHit hit, dist, mask, QueryTriggerInteraction.Ignore))
-        { point = hit.point; normal = hit.normal; return true; }
+        int hits = Physics.CapsuleCastNonAlloc(
+            top, bottom, radius,
+            Vector3.down, _groundHits, dist,
+            mask, QueryTriggerInteraction.Ignore);
 
-        if (Physics.Raycast(origin, Vector3.down, out hit, dist, mask, QueryTriggerInteraction.Ignore))
-        { point = hit.point; normal = hit.normal; return true; }
+        if (hits > 0)
+        {
+            point = _groundHits[0].point;
+            normal = _groundHits[0].normal;
+            return true;
+        }
 
-        point = default; normal = Vector3.up; return false;
+        point = default;
+        normal = Vector3.up;
+        return false;
     }
 
     Vector2 GetMoveInput()
@@ -727,9 +757,9 @@ public class PlayerController : MonoBehaviour
         float oldHealth = currentHealth;
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
         float actualHealed = currentHealth - oldHealth;
-        
+
         Debug.Log($"[PlayerController] ★ PLAYER picked up HEALTH PICKUP: +{actualHealed:F1} HP (was {oldHealth:F1}, now {currentHealth:F1}/{maxHealth:F1})", this);
-        
+
         UpdateHealthBar();
     }
 

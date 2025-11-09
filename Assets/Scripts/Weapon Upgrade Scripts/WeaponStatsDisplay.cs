@@ -69,8 +69,9 @@ public class WeaponStatsDisplay : MonoBehaviour
         Debug.Log($"<color=green>★ UPGRADE: {upgrade.pickupName}</color>");
     }
     
-    void OnAmmoChanged(int current, int max)
+    void OnAmmoChanged(int current, int reserve)
     {
+        // Note: Now receives (clip, reserve) instead of (clip, max)
         // Update ammo display
         if (!updateEveryFrame)
         {
@@ -90,11 +91,14 @@ public class WeaponStatsDisplay : MonoBehaviour
         WeaponStats stats = weaponController.GetCurrentStats();
         int currentAmmo = weaponController.GetCurrentAmmo();
         int maxAmmo = weaponController.GetMaxAmmo();
+        int reserveAmmo = weaponController.GetReserveAmmo();
+        int maxReserve = weaponController.GetMaxReserveAmmo();
         
         string display = "";
         
-        // Always show ammo
-        display += $"<b>AMMO:</b> {currentAmmo}/{maxAmmo}\n\n";
+        // Always show ammo with RESERVE
+        display += $"<b>AMMO:</b> {currentAmmo}/{maxAmmo}\n";
+        display += $"<b>RESERVE:</b> {reserveAmmo}/{maxReserve}\n\n";
         
         if (showAllStats)
         {
