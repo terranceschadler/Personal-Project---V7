@@ -172,6 +172,8 @@ MonoBehaviour:
   lifetime: 30
   pickupTrigger: {fileID: 0}
   freezeRotation: 1
+  showDebugLogs: 1
+  showScreenDebug: 1
 --- !u!54 &4504932423890817637
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -227,7 +229,7 @@ Transform:
   m_GameObject: {fileID: 4916486614966278149}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4.87, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

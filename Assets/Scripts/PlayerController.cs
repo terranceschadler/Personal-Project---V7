@@ -8,39 +8,21 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed = 5f;
     public float maxHealth = 100f;
 
-    [Header("Combat")]
+    [Header("Combat (New System)")]
     public Transform firePoint;
-    public LayerMask groundLayer;        // should include your walkable floor
-    public Weapon startingWeapon;
-
-    [Header("Combat Stats")]
-    [Tooltip("Base damage per bullet for weapons that don't define their own damage.")]
-    public float bulletDamage = 10f;
-
-    [Header("Weapon Upgrade System")]
-    [Tooltip("The new weapon upgrade controller - leave empty to auto-find on Start")]
+    public LayerMask groundLayer;
     public PlayerWeaponController weaponUpgradeController;
 
     [Header("Audio / VFX")]
-    public AudioClip shootClip;
-    [Range(0f, 1f)] public float shootVolume = 0.8f;
     public AudioSource audioSource;
-    public ParticleSystem muzzleFlash;
-    public GameObject muzzleFlashPrefab;
-    public float muzzleFlashLifetime = 0.25f;
-
-    [Header("Muzzle Flash Light")]
     public Light muzzleFlashLight;
     public float flashDuration = 0.05f;
     private float flashTimer = 0f;
 
     [Header("Health Bar")]
     public GameObject healthBarPrefab;
-    [Tooltip("World-space offset from the player pivot to place the health bar.")]
     public Vector3 healthBarOffset = new Vector3(0f, 2f, 0f);
-    [Tooltip("Optional: scale applied to the spawned health bar root.")]
     public Vector3 healthBarScale = Vector3.one;
-    [Tooltip("Optional: smooth the follow position for the health bar (seconds to reach ~63%). 0 = snap.")]
     [Min(0f)] public float healthBarFollowSmoothing = 0f;
 
     [Header("Movement Physics")]
@@ -65,13 +47,9 @@ public class PlayerController : MonoBehaviour
     public float stepOffset = 0.25f;
 
     [Header("Gamepad (Right Trigger Mapping)")]
-    [Tooltip("Name of the combined trigger axis in Input Manager.")]
     public string triggerAxisName = "Triggers";
-    [Tooltip("Flip the sign of the combined trigger axis before processing.")]
     public bool invertTriggerAxis = false;
-    [Tooltip("If true, RT is the POSITIVE side of the combined axis; if false, RT is the NEGATIVE side.")]
     public bool rtIsPositive = true;
-    [Tooltip("Fire when RT (derived 0..1) exceeds this value.")]
     [Range(0f, 1f)] public float rtFireThreshold = 0.35f;
 
     [Header("Aim (Stick vs Mouse Priority)")]
@@ -80,47 +58,30 @@ public class PlayerController : MonoBehaviour
     [Range(0.1f, 8f)] public float mouseMovePixelsThreshold = 1.0f;
 
     [Header("Stick Snap")]
-    [Tooltip("When the stick returns to zero, snap/hold the last stick direction briefly.")]
     public bool snapStickWhenZero = true;
     [Range(0.0f, 0.6f)] public float stickSnapHoldDuration = 0.18f;
 
-    // ??????????????? DASH ???????????????
     [Header("Dash")]
     public bool dashEnabled = true;
-    [Tooltip("Multiplies base moveSpeed while dashing.")]
     public float dashSpeedMultiplier = 3.0f;
-    [Tooltip("Seconds the dash persists.")]
     public float dashDuration = 0.22f;
-    [Tooltip("Cooldown between dashes in seconds.")]
     public float dashCooldown = 0.85f;
-    [Tooltip("Optional easing (0..1 normalized time). If null, flat speed.")]
     public AnimationCurve dashSpeedCurve = AnimationCurve.EaseInOut(0, 1, 1, 1);
-    [Tooltip("Keyboard fallback if no 'Dash' input is set.")]
     public KeyCode dashKey = KeyCode.LeftShift;
-    [Tooltip("Optional invincibility during dash (seconds). 0 = off.")]
     public float dashIFrames = 0.18f;
-
-    [Header("Dash Direction Controls")]
-    [Tooltip("Require some movement to dash. If true and you're not moving, dash won't fire.")]
     public bool requireMoveForDash = true;
-    [Tooltip("Minimum movement speed (m/s) to consider the player 'moving' for dash direction.")]
     public float minDashMoveSpeed = 0.15f;
-    [Tooltip("If true, rotate the player to face the dash direction at dash start.")]
     public bool faceDashDirection = false;
-
-    [Header("Dash VFX/SFX (optional)")]
     public AudioClip dashClip;
     [Range(0f, 1f)] public float dashVolume = 0.8f;
     public ParticleSystem dashVfx;
 
     [Header("Debug / Diagnostics")]
-    [Tooltip("Enable verbose info logs in Console (warnings/errors always show).")]
     public bool debugLogs = false;
 
     private float currentHealth;
     private Camera mainCamera;
     private float nextFireTime = 0f;
-    private Weapon currentWeapon;
 
     private Image healthFill;
     private Transform healthBarTransform;
@@ -154,7 +115,7 @@ public class PlayerController : MonoBehaviour
     // Public read-only for other systems
     public bool IsDashing => isDashing;
 
-    // --- Input availability probes (set in Start to avoid per-frame exceptions) ---
+    // --- Input availability probes ---
     private bool triggerAxisAvailable = false;
     private bool dashButtonAvailable = false;
 
@@ -165,7 +126,6 @@ public class PlayerController : MonoBehaviour
     private Vector3 _lastGroundPoint;
     private Vector3 _lastGroundNormal = Vector3.up;
 
-    // ---------- Debug helpers ----------
     private void DLog(string msg) { if (debugLogs) Debug.Log(msg, this); }
     private void DLogFormat(string fmt, params object[] args) { if (debugLogs) Debug.LogFormat(this, fmt, args); }
 
@@ -203,32 +163,28 @@ public class PlayerController : MonoBehaviour
 
         if (muzzleFlashLight != null) muzzleFlashLight.enabled = false;
 
-        EquipWeapon(startingWeapon);
-
-        // ★ WEAPON UPGRADE SYSTEM INTEGRATION ★
+        // New weapon system
         if (weaponUpgradeController == null)
-        {
             weaponUpgradeController = GetComponent<PlayerWeaponController>();
-        }
+
         if (weaponUpgradeController != null)
         {
-            DLog("[PlayerController] Weapon Upgrade System enabled!");
+            DLog("[PlayerController] New Weapon System active.");
         }
         else
         {
-            DLog("[PlayerController] Weapon Upgrade System not found - using legacy weapon system.");
+            Debug.LogError("[PlayerController] No PlayerWeaponController found!");
         }
-        // ★ END INTEGRATION ★
 
         _lastMousePos = Input.mousePosition;
         _mousePriorityUntil = _stickPriorityUntil = 0f;
         _lastStickDir = transform.forward;
 
-        // --- Probe optional inputs ONCE (no per-frame try/catch) ---
+        // Probe optional inputs ONCE
         try { _ = Input.GetAxis(triggerAxisName); triggerAxisAvailable = true; } catch { triggerAxisAvailable = false; }
         try { _ = Input.GetButton("Dash"); dashButtonAvailable = true; } catch { dashButtonAvailable = false; }
 
-        // Seed ground cache to something sensible
+        // Seed ground cache
         _lastGroundPoint = transform.position + Vector3.down * 0.5f;
         _lastGroundNormal = Vector3.up;
         _groundProbeCountdown = 0;
@@ -236,30 +192,28 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        HandleMovement(); // (includes dash evaluation + application)
+        HandleMovement(); // includes dash evaluation + application
         AimWithPriorityAndSnap();
 
         // Mouse (Fire1) OR Right Trigger
         bool wantsMouseFire = Input.GetButton("Fire1");
         bool wantsRT = ReadRightTrigger01() > rtFireThreshold;
 
-        // ★ MODIFIED: Check which weapon system to use ★
-        if ((wantsMouseFire || wantsRT) && Time.time >= nextFireTime)
+        if ((wantsMouseFire || wantsRT) && Time.time >= nextFireTime && weaponUpgradeController != null)
         {
-            // Try new upgrade system first
-            if (weaponUpgradeController != null && weaponUpgradeController.CanFire())
+            if (weaponUpgradeController.CanFire())
             {
-                Shoot();
+                weaponUpgradeController.Fire();
                 nextFireTime = Time.time + (1f / weaponUpgradeController.GetFireRate());
-            }
-            // Fallback to old weapon system
-            else if (currentWeapon != null)
-            {
-                Shoot();
-                nextFireTime = Time.time + 1f / currentWeapon.fireRate;
+
+                // Optional visual ping
+                if (muzzleFlashLight != null)
+                {
+                    muzzleFlashLight.enabled = true;
+                    flashTimer = flashDuration;
+                }
             }
         }
-        // ★ END MODIFICATION ★
 
         // Muzzle flash light timer
         if (muzzleFlashLight != null && muzzleFlashLight.enabled)
@@ -292,112 +246,6 @@ public class PlayerController : MonoBehaviour
 
         _lastMousePos = Input.mousePosition;
     }
-
-    // ★ MODIFIED SHOOT METHOD ★
-    void Shoot()
-    {
-        // Try new weapon upgrade system first
-        if (weaponUpgradeController != null && weaponUpgradeController.CanFire())
-        {
-            weaponUpgradeController.Fire();
-
-            // Keep your existing visual effects
-            if (muzzleFlashLight != null)
-            {
-                muzzleFlashLight.enabled = true;
-                flashTimer = flashDuration;
-            }
-        }
-        else
-        {
-            // Fallback to legacy system
-            ShootLegacy();
-        }
-    }
-    // ★ END MODIFICATION ★
-
-    // ★ RENAMED: Old Shoot() method for backward compatibility ★
-    void ShootLegacy()
-    {
-        if (currentWeapon == null)
-        {
-            Debug.LogWarning("[PlayerController] Cannot shoot: no weapon equipped!", this);
-            return;
-        }
-
-        // Audio
-        if (shootClip != null)
-        {
-            if (audioSource != null) audioSource.PlayOneShot(shootClip, shootVolume);
-            else AudioSource.PlayClipAtPoint(shootClip, transform.position, shootVolume);
-        }
-
-        // Muzzle flash light
-        if (muzzleFlashLight != null)
-        {
-            muzzleFlashLight.enabled = true;
-            flashTimer = flashDuration;
-        }
-
-        // Muzzle flash particle
-        if (muzzleFlash != null) muzzleFlash.Play();
-
-        // Muzzle flash prefab
-        if (muzzleFlashPrefab != null)
-        {
-            GameObject flash = Instantiate(muzzleFlashPrefab, firePoint.position, firePoint.rotation);
-            Destroy(flash, muzzleFlashLifetime);
-        }
-
-        // Fire bullets
-        for (int i = 0; i < currentWeapon.bulletsPerShot; i++)
-        {
-            float angle = 0f;
-            if (currentWeapon.bulletsPerShot > 1)
-            {
-                float spread = currentWeapon.spreadAngle;
-                float step = spread / (currentWeapon.bulletsPerShot - 1);
-                angle = -spread * 0.5f + (step * i);
-            }
-
-            Quaternion rot = firePoint.rotation * Quaternion.Euler(0f, angle, 0f);
-            GameObject bulletObj = Instantiate(currentWeapon.bulletPrefab, firePoint.position, rot);
-
-            var bullet = bulletObj.GetComponent<Bullet>();
-            if (bullet != null)
-            {
-                bullet.Initialize(gameObject);
-                bullet.damage = bulletDamage;
-                bullet.speed = currentWeapon.bulletSpeed;
-            }
-            else
-            {
-                var iBullet = bulletObj.GetComponent<IBullet>();
-                if (iBullet != null) iBullet.Initialize(gameObject);
-            }
-        }
-    }
-    // ★ END LEGACY METHOD ★
-
-    // ★ PUBLIC METHODS for external scripts (WeaponPickup, ShopStation, etc.) ★
-    public void EquipWeapon(Weapon newWeapon)
-    {
-        if (newWeapon == null)
-        {
-            Debug.LogWarning("[PlayerController] Tried to equip null weapon.", this);
-            return;
-        }
-
-        currentWeapon = newWeapon;
-        DLog($"[PlayerController] Equipped {newWeapon.weaponName}");
-    }
-
-    public void GiveWeapon(Weapon newWeapon)
-    {
-        // Alias for EquipWeapon - used by ShopStation
-        EquipWeapon(newWeapon);
-    }
-    // ★ END PUBLIC METHODS ★
 
     // ---------------- MOVEMENT / DASH ----------------
     float ReadRightTrigger01()

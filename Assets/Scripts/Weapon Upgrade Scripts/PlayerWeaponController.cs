@@ -4,8 +4,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Weapon controller designed to integrate with existing PlayerController.
-/// Can be called by external scripts (like PlayerController) to handle firing.
-/// Reserve Ammo enabled: magazine (current clip) + reserve pool with proper reload.
+/// Handles firing, upgrades, and magazine+reserve ammo with safe reload.
 /// </summary>
 public class PlayerWeaponController : MonoBehaviour
 {
@@ -29,7 +28,7 @@ public class PlayerWeaponController : MonoBehaviour
     // Magazine (clip) ammo
     private int currentAmmo;
 
-    // Reload gate
+    // Reload state
     private bool isReloading;
 
     // Upgrades record
@@ -83,25 +82,17 @@ public class PlayerWeaponController : MonoBehaviour
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
     }
 
-    /// <summary>
-    /// Check if weapon can fire (called by PlayerController before firing)
-    /// </summary>
+    // ---------------- FIRE ----------------
     public bool CanFire()
     {
         return !isReloading && currentAmmo > 0;
     }
 
-    /// <summary>
-    /// Get the fire rate for timing (called by PlayerController)
-    /// </summary>
     public float GetFireRate()
     {
         return currentStats.GetTotalFireRate();
     }
 
-    /// <summary>
-    /// Trigger a shot (called by PlayerController when it's time to fire)
-    /// </summary>
     public void Fire()
     {
         if (!CanFire())
@@ -114,14 +105,11 @@ public class PlayerWeaponController : MonoBehaviour
             return;
         }
 
-        // Spend a round from the magazine
         currentAmmo--;
 
         // Play fire sound
         if (audioSource != null && weaponData.fireSound != null)
-        {
             audioSource.PlayOneShot(weaponData.fireSound);
-        }
 
         // Spawn muzzle flash
         if (weaponData.muzzleFlashPrefab != null)
@@ -137,39 +125,30 @@ public class PlayerWeaponController : MonoBehaviour
         }
 
         OnWeaponFired?.Invoke();
-
-        // UI now shows (clip / reserve)
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
 
-        // If we just hit 0 in the mag and still have reserve, auto-reload (optional behavior)
+        // Auto-reload when clip empty
         if (currentAmmo <= 0 && reserveAmmo > 0 && !isReloading)
-        {
             StartReload();
-        }
     }
 
     private void FireProjectile(int pelletIndex)
     {
-        // Calculate spread
         float spreadAngle = 0f;
         if (currentStats.bulletsPerShot > 1)
         {
-            // Distribute pellets evenly across spread angle
             float spreadRange = currentStats.bulletSpread;
             float step = spreadRange / (currentStats.bulletsPerShot - 1);
             spreadAngle = -spreadRange / 2f + (step * pelletIndex);
         }
         else if (currentStats.bulletSpread > 0)
         {
-            // Random spread for single shot
             spreadAngle = Random.Range(-currentStats.bulletSpread / 2f, currentStats.bulletSpread / 2f);
         }
 
-        // Calculate direction
         Quaternion spreadRotation = Quaternion.Euler(0, spreadAngle, 0);
         Quaternion finalRotation = firePoint.rotation * spreadRotation;
 
-        // Instantiate bullet
         GameObject bulletObj = Instantiate(weaponData.bulletPrefab, firePoint.position, finalRotation);
 
         // Initialize bullet with stats
@@ -180,57 +159,67 @@ public class PlayerWeaponController : MonoBehaviour
         }
         else
         {
-            // Try legacy bullet
             Bullet legacyBullet = bulletObj.GetComponent<Bullet>();
             if (legacyBullet != null)
             {
                 legacyBullet.Initialize(gameObject);
-                // Apply basic stats to legacy bullet
                 legacyBullet.damage = currentStats.GetTotalDamage();
                 legacyBullet.speed = currentStats.GetTotalVelocity();
                 legacyBullet.lifetime = currentStats.GetTotalLifetime();
             }
             else
             {
-                // Fallback to IBullet interface
                 IBullet basicBullet = bulletObj.GetComponent<IBullet>();
-                if (basicBullet != null)
-                {
-                    basicBullet.Initialize(gameObject);
-                }
+                if (basicBullet != null) basicBullet.Initialize(gameObject);
             }
         }
     }
 
-    /// <summary>
-    /// Start reloading (can be called manually or automatically)
-    /// Pulls ammo from reserve into the magazine.
-    /// </summary>
+    // ---------------- RELOAD ----------------
+    public void TryReload()
+    {
+        if (!isReloading) StartReload();
+    }
+
     public void StartReload()
     {
-        if (isReloading) return;
+        if (isReloading)
+            return;
 
         int magSize = currentStats.GetTotalMagazineSize();
-        if (currentAmmo >= magSize) return;   // magazine already full
-        if (reserveAmmo <= 0) return;         // nothing to load
+        if (currentAmmo >= magSize)
+        {
+            if (showDebugInfo) Debug.Log("[WeaponController] Reload skipped: magazine already full.");
+            OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
+            return;
+        }
+
+        if (reserveAmmo <= 0)
+        {
+            if (showDebugInfo) Debug.Log("[WeaponController] Reload skipped: no reserve ammo.");
+            OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
+            return;
+        }
 
         isReloading = true;
         float reloadTime = currentStats.GetTotalReloadTime();
-
         OnReloadStarted?.Invoke(reloadTime);
 
-        // Play sound
         if (audioSource != null && weaponData.reloadSound != null)
-        {
             audioSource.PlayOneShot(weaponData.reloadSound);
-        }
 
-        StartCoroutine(ReloadCoroutine(reloadTime));
+        StartCoroutine(ReloadCoroutineSafe(reloadTime));
     }
 
-    private IEnumerator ReloadCoroutine(float reloadTime)
+    private IEnumerator ReloadCoroutineSafe(float reloadTime)
     {
-        yield return new WaitForSeconds(reloadTime);
+        float elapsed = 0f;
+        while (elapsed < reloadTime)
+        {
+            if (Time.timeScale > 0f)
+                elapsed += Time.deltaTime;
+            yield return null;
+        }
 
         int magSize = currentStats.GetTotalMagazineSize();
         int needed = magSize - currentAmmo;
@@ -241,14 +230,13 @@ public class PlayerWeaponController : MonoBehaviour
 
         isReloading = false;
 
-        // UI now shows (clip / reserve)
+        if (showDebugInfo)
+            Debug.Log($"[WeaponController] Reload complete: +{toLoad} → clip={currentAmmo}, reserve={reserveAmmo}");
+
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
     }
 
-    /// <summary>
-    /// Add ammo to RESERVE (for pickups).
-    /// Returns true if any reserve ammo was actually added.
-    /// </summary>
+    // ---------------- AMMO PICKUPS ----------------
     public bool AddAmmo(int amount)
     {
         if (amount <= 0) return false;
@@ -258,101 +246,41 @@ public class PlayerWeaponController : MonoBehaviour
         int added = reserveAmmo - oldReserve;
 
         if (showDebugInfo)
-        {
             Debug.Log($"[PlayerWeaponController] Added {added} reserve ammo. Reserve: {reserveAmmo}/{maxReserveAmmo}");
-        }
 
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
         return added > 0;
     }
 
-    /// <summary>
-    /// Apply an upgrade pickup to this weapon
-    /// </summary>
+    // ---------------- UPGRADES ----------------
     public void ApplyUpgrade(UpgradePickup upgrade)
     {
         if (upgrade == null) return;
 
-        // Apply all effects from the upgrade
         upgrade.ApplyUpgrade(currentStats);
-
-        // Track applied upgrades
         appliedUpgrades.Add(upgrade);
 
-        // Adjust current ammo if magazine size changed
         int newMagSize = currentStats.GetTotalMagazineSize();
         if (currentAmmo > newMagSize)
-        {
             currentAmmo = newMagSize;
-        }
 
         OnUpgradeApplied?.Invoke(upgrade);
-
-        // UI still reports (clip / reserve)
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
 
         if (showDebugInfo)
         {
             Debug.Log($"[PlayerWeaponController] ★ UPGRADE APPLIED: {upgrade.pickupName}\n" +
-                      $"Effects: {upgrade.GetFullDescription()}\n" +
-                      $"Damage: {currentStats.GetTotalDamage():F1} | Fire Rate: {currentStats.GetTotalFireRate():F2}/s | " +
-                      $"Magazine: {currentStats.GetTotalMagazineSize()} | Bullets/Shot: {currentStats.bulletsPerShot}");
+                      $"Damage: {currentStats.GetTotalDamage():F1} | FireRate: {currentStats.GetTotalFireRate():F2}/s | " +
+                      $"Mag: {currentStats.GetTotalMagazineSize()} | Bullets/Shot: {currentStats.bulletsPerShot}");
         }
     }
 
-    /// <summary>
-    /// Get all applied upgrades
-    /// </summary>
-    public List<UpgradePickup> GetAppliedUpgrades()
-    {
-        return new List<UpgradePickup>(appliedUpgrades);
-    }
-
-    /// <summary>
-    /// Get current weapon stats (for UI display)
-    /// </summary>
-    public WeaponStats GetCurrentStats()
-    {
-        return currentStats;
-    }
-
-    /// <summary>
-    /// Get current ammo in the MAGAZINE (clip)
-    /// </summary>
-    public int GetCurrentAmmo()
-    {
-        return currentAmmo;
-    }
-
-    /// <summary>
-    /// Get magazine size (max rounds in the clip)
-    /// </summary>
-    public int GetMaxAmmo()
-    {
-        return currentStats.GetTotalMagazineSize();
-    }
-
-    /// <summary>
-    /// Get current RESERVE ammo (outside of magazine)
-    /// </summary>
-    public int GetReserveAmmo()
-    {
-        return reserveAmmo;
-    }
-
-    /// <summary>
-    /// Get maximum RESERVE capacity
-    /// </summary>
-    public int GetMaxReserveAmmo()
-    {
-        return maxReserveAmmo;
-    }
-
-    /// <summary>
-    /// Check if currently reloading
-    /// </summary>
-    public bool IsReloading()
-    {
-        return isReloading;
-    }
+    // ---------------- GETTERS ----------------
+    public List<UpgradePickup> GetAppliedUpgrades() => new List<UpgradePickup>(appliedUpgrades);
+    public WeaponStats GetCurrentStats() => currentStats;
+    public int GetCurrentAmmo() => currentAmmo;
+    public int GetMaxAmmo() => currentStats.GetTotalMagazineSize();
+    public int GetReserveAmmo() => reserveAmmo;
+    public int GetMaxReserveAmmo() => maxReserveAmmo;
+    public bool IsReloading() => isReloading;
 }
