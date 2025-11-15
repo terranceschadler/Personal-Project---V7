@@ -65,6 +65,12 @@ public class GameManager : MonoBehaviour
     [Range(0f, 1f)] public float maxHealthPickupDropChance = 0.35f;
     public Vector3 maxHealthPickupOffset = new Vector3(-0.75f, 0f, -0.75f);
 
+    // Weapon Upgrade pickup
+    [Header("Boss Weapon Upgrade Pickup")]
+    public GameObject weaponUpgradePickupPrefab;
+    [Range(0f, 1f)] public float weaponUpgradeDropChance = 0.5f;
+    public Vector3 weaponUpgradeOffset = new Vector3(0f, 0f, -0.75f);
+
     // ---------- Helicopter Parts ----------
     [Header("Helicopter Parts Drops")]
     public GameObject helicopterPartPrefab;    // fallback
@@ -761,7 +767,8 @@ public class GameManager : MonoBehaviour
         AddScore(bossKillScoreReward);
 
         DLog("[GameManager] Boss kill #" + bossKillCount + " at " + dropPosition + ". weaponChance=" + weaponDropChance.ToString("0.##") +
-             " partChance=" + helicopterPartDropChance.ToString("0.##") + " maxHPchance=" + maxHealthPickupDropChance.ToString("0.##"));
+             " partChance=" + helicopterPartDropChance.ToString("0.##") + " maxHPchance=" + maxHealthPickupDropChance.ToString("0.##") +
+             " upgradeChance=" + weaponUpgradeDropChance.ToString("0.##"));
 
         if (UnityEngine.Random.value <= weaponDropChance)
         {
@@ -776,6 +783,10 @@ public class GameManager : MonoBehaviour
         if (maxHealthPickupPrefab != null && UnityEngine.Random.value <= maxHealthPickupDropChance)
         {
             UnityEngine.Object.Instantiate(maxHealthPickupPrefab, dropPosition + maxHealthPickupOffset, Quaternion.identity);
+        }
+        if (weaponUpgradePickupPrefab != null && UnityEngine.Random.value <= weaponUpgradeDropChance)
+        {
+            UnityEngine.Object.Instantiate(weaponUpgradePickupPrefab, dropPosition + weaponUpgradeOffset, Quaternion.identity);
         }
     }
 
@@ -930,7 +941,7 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("[GameManager] No helicopter part prefabs assigned!");
 
         if (helicopterPartDropChance <= 0f)
-            Debug.LogWarning("[GameManager] HelicopterPartDropChance is 0 — parts will NEVER drop.");
+            Debug.LogWarning("[GameManager] HelicopterPartDropChance is 0 ï¿½ parts will NEVER drop.");
 
         bool anyWeapon =
             (bossWeaponDropPrefabs != null && bossWeaponDropPrefabs.Length > 0) ||
