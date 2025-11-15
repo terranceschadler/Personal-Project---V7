@@ -83,6 +83,10 @@ public class GameManager : MonoBehaviour
     public event Action<int, int> OnHelicopterProgressChanged;
     public event Action<string> OnHelicopterPartCollected;
 
+    [Header("Weapon Reset")]
+    [Tooltip("Automatically reset player weapons when level restarts")]
+    public bool resetWeaponsOnLevelRestart = true;
+
     // =========================
     // BOSS HEALTH SCALING
     // =========================
@@ -531,9 +535,61 @@ public class GameManager : MonoBehaviour
         try { if (WinUIController.Instance != null) WinUIController.Instance.Resume(); } catch { }
         HardResumeGameplay();
 
+        // Clean up scene before reload
+        StartCoroutine(RestartLevelCoroutine());
+    }
+
+    private IEnumerator RestartLevelCoroutine()
+    {
+        DLog("[GameManager] Starting level restart...");
+        
+        // Clean up any lingering objects
+        CleanupSceneObjects();
+        
+        // Wait a frame for cleanup
+        yield return null;
+
         var scene = SceneManager.GetActiveScene();
         DLog("[GameManager] Restarting '" + scene.name + "' (#" + scene.buildIndex + ").");
         SceneManager.LoadScene(scene.buildIndex);
+    }
+
+    private void CleanupSceneObjects()
+    {
+        DLog("[GameManager] Cleaning up scene objects...");
+        
+        // Clean up any upgrade pickups
+        try
+        {
+            GameObject[] pickups = GameObject.FindGameObjectsWithTag("Pickup");
+            foreach (GameObject pickup in pickups)
+            {
+                if (pickup != null) Destroy(pickup);
+            }
+        }
+        catch { }
+        
+        // Clean up any lingering enemies
+        try
+        {
+            GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+            foreach (GameObject enemy in enemies)
+            {
+                if (enemy != null) Destroy(enemy);
+            }
+        }
+        catch { }
+        
+        // Clean up any bullets
+        try
+        {
+            GameObject[] bullets = GameObject.FindGameObjectsWithTag("Bullet");
+            foreach (GameObject bullet in bullets)
+            {
+                if (bullet != null) Destroy(bullet);
+            }
+        }
+        catch { }
     }
     public void ConfirmQuitFromUI() { QuitGame(); }
     public void QuitGame()
@@ -627,7 +683,36 @@ public class GameManager : MonoBehaviour
 
         ValidateHelicopterDropConfig();
         FireHelicopterProgressChanged();
+        ResetPlayerWeapons();
         // Intentionally NOT starting a wave here; caller decides (e.g., after scene load).
+    }
+
+    private void ResetPlayerWeapons()
+    {
+        if (!resetWeaponsOnLevelRestart) return;
+
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+        if (playerObject == null)
+        {
+            PlayerWeaponController pwc = FindObjectOfType<PlayerWeaponController>();
+            if (pwc != null) playerObject = pwc.gameObject;
+        }
+
+        if (playerObject == null)
+        {
+            if (debugLogs) Debug.LogWarning("[GameManager] Cannot reset weapons - player not found");
+            return;
+        }
+
+        WeaponResetSystem resetSystem = playerObject.GetComponent<WeaponResetSystem>();
+        if (resetSystem == null)
+        {
+            resetSystem = playerObject.AddComponent<WeaponResetSystem>();
+            if (debugLogs) Debug.Log("[GameManager] Added WeaponResetSystem to player");
+        }
+
+        resetSystem.ResetWeapon();
+        DLog("[GameManager] Player weapons reset complete");
     }
 
     private int GetKillsRequiredForWave(int waveIndex) { return Mathf.Max(1, baseKillsPerWave + killsPerWaveGrowth * (waveIndex - 1)); }
@@ -875,14 +960,81 @@ public class GameManager : MonoBehaviour
         if (_pendingResetOnSceneLoad)
         {
             _pendingResetOnSceneLoad = false;
-            ResetRun(true);
-            BeginWave(currentWave);
-            StartCoroutine(DeferredRebroadcastAllStats());
+            StartCoroutine(InitializeAfterSceneLoad());
         }
         else
         {
             if (_runActive && !_inInterWave) BeginWave(currentWave);
             StartCoroutine(DeferredRebroadcastAllStats());
+        }
+    }
+
+    private IEnumerator InitializeAfterSceneLoad()
+    {
+        // Wait a bit for scene to settle
+        yield return new WaitForSeconds(0.2f);
+        
+        // CRITICAL: Trigger NavMesh baking using your existing NavMeshRuntimeBaker
+        bool navMeshBaked = false;
+        NavMeshRuntimeBaker navBaker = FindObjectOfType<NavMeshRuntimeBaker>();
+        
+        if (navBaker != null)
+        {
+            DLog("[GameManager] Found NavMeshRuntimeBaker, requesting bake...");
+            
+            // Request bake from the runtime baker
+            navBaker.RequestBake(this);
+            
+            // Wait for bake to complete (max 5 seconds)
+            float waitTime = 0f;
+            while (!navBaker.BakeCompleted && waitTime < 5f)
+            {
+                yield return new WaitForSeconds(0.2f);
+                waitTime += 0.2f;
+            }
+            
+            if (navBaker.BakeCompleted)
+            {
+                DLog($"[GameManager] NavMesh bake completed in {waitTime:F1}s");
+                navMeshBaked = true;
+            }
+            else
+            {
+                Debug.LogWarning($"[GameManager] NavMesh bake timeout after {waitTime:F1}s");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] NavMeshRuntimeBaker not found! NavMesh may not be available.");
+            // Fallback: wait a bit and hope for the best
+            yield return new WaitForSeconds(1.0f);
+        }
+        
+        // Reset the run
+        ResetRun(true);
+        
+        // Wait another frame for weapon reset to complete
+        yield return null;
+        
+        // Wait a bit more to ensure UI components are ready
+        yield return new WaitForSeconds(0.2f);
+        
+        // Start the wave
+        BeginWave(currentWave);
+        
+        // Rebroadcast all stats
+        StartCoroutine(DeferredRebroadcastAllStats());
+    }
+    
+    private void TriggerNavMeshBake()
+    {
+        // This method is now handled in InitializeAfterSceneLoad
+        // Keeping it for backward compatibility
+        NavMeshRuntimeBaker navBaker = FindObjectOfType<NavMeshRuntimeBaker>();
+        if (navBaker != null)
+        {
+            DLog("[GameManager] Triggering NavMeshRuntimeBaker...");
+            navBaker.RequestBake(this);
         }
     }
 

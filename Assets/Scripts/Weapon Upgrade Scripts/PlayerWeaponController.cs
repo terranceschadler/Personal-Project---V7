@@ -3,17 +3,17 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// Weapon controller designed to integrate with existing PlayerController.
-/// Handles firing, upgrades, and magazine+reserve ammo with safe reload.
+/// Weapon controller designed to integrate with PlayerController.
+/// Handles firing, upgrades, ammo reserves, and reliable reloading.
 /// </summary>
 public class PlayerWeaponController : MonoBehaviour
 {
     [Header("Weapon Configuration")]
-    [Tooltip("The weapon data asset to use")]
+    [Tooltip("Weapon data asset that defines base stats.")]
     public WeaponData weaponData;
 
     [Header("Fire Points")]
-    [Tooltip("Transform where bullets spawn - can be same as PlayerController's firePoint")]
+    [Tooltip("Transform where bullets spawn (usually from PlayerController).")]
     public Transform firePoint;
 
     [Header("Audio")]
@@ -43,7 +43,6 @@ public class PlayerWeaponController : MonoBehaviour
     [SerializeField] private int reserveAmmo = 60;
 
     // ---------------- Events ----------------
-    // NOTE: For UI, we now report (currentClip, reserveAmmo)
     public System.Action<int, int> OnAmmoChanged;          // (currentClip, reserveAmmo)
     public System.Action<UpgradePickup> OnUpgradeApplied;
     public System.Action<float> OnReloadStarted;           // reload time
@@ -60,7 +59,6 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (firePoint == null)
         {
-            // Try to find PlayerController's firePoint
             PlayerController player = GetComponent<PlayerController>();
             if (player != null && player.firePoint != null)
             {
@@ -74,11 +72,9 @@ public class PlayerWeaponController : MonoBehaviour
             }
         }
 
-        // Initialize weapon stats and start with a full magazine
         currentStats = weaponData.CreateRuntimeStats();
         currentAmmo = currentStats.GetTotalMagazineSize();
 
-        // Push initial values to UI: (clip, reserve)
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
     }
 
@@ -107,27 +103,21 @@ public class PlayerWeaponController : MonoBehaviour
 
         currentAmmo--;
 
-        // Play fire sound
         if (audioSource != null && weaponData.fireSound != null)
             audioSource.PlayOneShot(weaponData.fireSound);
 
-        // Spawn muzzle flash
         if (weaponData.muzzleFlashPrefab != null)
         {
             GameObject flash = Instantiate(weaponData.muzzleFlashPrefab, firePoint.position, firePoint.rotation);
             Destroy(flash, 0.5f);
         }
 
-        // Fire bullets
         for (int i = 0; i < currentStats.bulletsPerShot; i++)
-        {
             FireProjectile(i);
-        }
 
         OnWeaponFired?.Invoke();
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
 
-        // Auto-reload when clip empty
         if (currentAmmo <= 0 && reserveAmmo > 0 && !isReloading)
             StartReload();
     }
@@ -151,7 +141,6 @@ public class PlayerWeaponController : MonoBehaviour
 
         GameObject bulletObj = Instantiate(weaponData.bulletPrefab, firePoint.position, finalRotation);
 
-        // Initialize bullet with stats
         EnhancedBullet enhancedBullet = bulletObj.GetComponent<EnhancedBullet>();
         if (enhancedBullet != null)
         {
@@ -187,16 +176,18 @@ public class PlayerWeaponController : MonoBehaviour
             return;
 
         int magSize = currentStats.GetTotalMagazineSize();
-        if (currentAmmo >= magSize)
+
+        // Safer checks for valid reload conditions
+        if (reserveAmmo <= 0)
         {
-            if (showDebugInfo) Debug.Log("[WeaponController] Reload skipped: magazine already full.");
+            if (showDebugInfo) Debug.Log("[WeaponController] Reload blocked: no reserve ammo available.");
             OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
             return;
         }
 
-        if (reserveAmmo <= 0)
+        if (currentAmmo >= magSize)
         {
-            if (showDebugInfo) Debug.Log("[WeaponController] Reload skipped: no reserve ammo.");
+            if (showDebugInfo) Debug.Log("[WeaponController] Reload skipped: magazine already full.");
             OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
             return;
         }
@@ -227,7 +218,6 @@ public class PlayerWeaponController : MonoBehaviour
 
         currentAmmo += toLoad;
         reserveAmmo -= toLoad;
-
         isReloading = false;
 
         if (showDebugInfo)
@@ -249,6 +239,14 @@ public class PlayerWeaponController : MonoBehaviour
             Debug.Log($"[PlayerWeaponController] Added {added} reserve ammo. Reserve: {reserveAmmo}/{maxReserveAmmo}");
 
         OnAmmoChanged?.Invoke(currentAmmo, reserveAmmo);
+
+        // Auto-trigger reload if clip empty and now have reserve ammo
+        if (added > 0 && currentAmmo <= 0 && !isReloading)
+        {
+            if (showDebugInfo) Debug.Log("[PlayerWeaponController] Auto-reloading after ammo pickup...");
+            StartReload();
+        }
+
         return added > 0;
     }
 

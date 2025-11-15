@@ -2192,6 +2192,8 @@ MonoBehaviour:
   firePoint: {fileID: 0}
   audioSource: {fileID: 1327456027}
   showDebugInfo: 1
+  maxReserveAmmo: 120
+  reserveAmmo: 60
 --- !u!82 &1327456027
 AudioSource:
   m_ObjectHideFlags: 0
@@ -2289,6 +2291,24 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &1327456037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340955122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6ede7fec842c7747864eacd66f850ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponResetSystem
+  weaponController: {fileID: 0}
+  upgradeManager: {fileID: 0}
+  resetToDefaults: 1
+  clearUpgrades: 1
+  resetReserveAmmo: 1
+  resetPlayerUpgrades: 1
 --- !u!1 &1455695343
 GameObject:
   m_ObjectHideFlags: 0
@@ -2483,6 +2503,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3749116313806319683, guid: cb069310e6cc3bd49ad52cf06bc5e064, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1327456027}
+    - targetCorrespondingSourceObject: {fileID: 3749116313806319683, guid: cb069310e6cc3bd49ad52cf06bc5e064, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1327456037}
   m_SourcePrefab: {fileID: 100100000, guid: cb069310e6cc3bd49ad52cf06bc5e064, type: 3}
 --- !u!1 &1620720774
 GameObject:
@@ -3370,10 +3393,11 @@ MonoBehaviour:
   - {fileID: 8119292090307705823, guid: c41b764dca124284b89085d22ef4eabd, type: 3}
   collectedHelicopterParts: []
   requiredHelicopterParts: 3
+  resetWeaponsOnLevelRestart: 1
   bossHealthScalingMode: 0
-  bossBaseHealthOverride: 500
-  bossHealthAddPerBoss: 1500
-  bossHealthMulPerBoss: 1.2
+  bossBaseHealthOverride: 5000
+  bossHealthAddPerBoss: 5000
+  bossHealthMulPerBoss: 2.5
   bossHealthMaxMultiplierClamp: 0
   bossHealthCurve:
     serializedVersion: 2
@@ -3400,7 +3424,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   forceFirstBossHealthEachRun: 1
-  firstBossHealth: 500
+  firstBossHealth: 1000
   togglePauseOnEsc: 1
   autoDisableEscIfPauseUI: 1
   pauseKey: 27
@@ -3415,11 +3439,11 @@ MonoBehaviour:
   baseKillsPerWave: 10
   killsPerWaveGrowth: 5
   baseWaveDuration: 60
-  waveDurationGrowth: 50
+  waveDurationGrowth: 100
   interWaveDelay: 5
   requireClearBoardToEndWave: 0
   minConcurrentEnemies: 50
-  maxConcurrentEnemies: 100
+  maxConcurrentEnemies: 200
   rampStartDelay: 1
   concurrentRamp:
     serializedVersion: 2

@@ -58,6 +58,21 @@ public class IntegratedUpgradePickup : MonoBehaviour
                 col.isTrigger = true;
         }
         
+        // Auto-find IntegratedUpgradeSystem if not assigned
+        if (upgradeSystem == null)
+        {
+            upgradeSystem = FindObjectOfType<IntegratedUpgradeSystem>();
+            
+            if (upgradeSystem != null)
+            {
+                Debug.Log("[IntegratedUpgradePickup] Auto-found IntegratedUpgradeSystem");
+            }
+            else
+            {
+                Debug.LogWarning("[IntegratedUpgradePickup] No IntegratedUpgradeSystem found in scene! Pickup won't work.");
+            }
+        }
+        
         ApplyTierVisuals();
     }
     
@@ -147,6 +162,13 @@ public class IntegratedUpgradePickup : MonoBehaviour
     {
         collected = true;
         
+        // Try to find upgrade system if missing
+        if (upgradeSystem == null)
+        {
+            Debug.Log("[IntegratedUpgradePickup] Upgrade system missing, searching...");
+            upgradeSystem = FindObjectOfType<IntegratedUpgradeSystem>();
+        }
+        
         // Play sound
         if (pickupSound != null)
         {
@@ -163,11 +185,16 @@ public class IntegratedUpgradePickup : MonoBehaviour
         // Trigger upgrade system
         if (upgradeSystem != null)
         {
+            Debug.Log($"[IntegratedUpgradePickup] Collected {tier} tier upgrade, triggering system");
             upgradeSystem.OnPickupCollected(this);
         }
         else
         {
-            Debug.LogWarning("[IntegratedUpgradePickup] No upgrade system reference!");
+            Debug.LogError("[IntegratedUpgradePickup] No IntegratedUpgradeSystem found in scene! Cannot show upgrade options. " +
+                          "Make sure IntegratedUpgradeSystem component exists in your scene.");
+            // Don't destroy yet, maybe player can find another way to collect
+            collected = false;
+            return;
         }
         
         // Visual feedback

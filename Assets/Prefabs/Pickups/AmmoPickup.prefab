@@ -172,8 +172,8 @@ MonoBehaviour:
   lifetime: 30
   pickupTrigger: {fileID: 0}
   freezeRotation: 1
-  showDebugLogs: 1
-  showScreenDebug: 1
+  showDebugLogs: 0
+  showScreenDebug: 0
 --- !u!54 &4504932423890817637
 Rigidbody:
   m_ObjectHideFlags: 0

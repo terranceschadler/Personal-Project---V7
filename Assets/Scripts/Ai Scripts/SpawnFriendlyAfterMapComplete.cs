@@ -1,5 +1,6 @@
 // Assets/Scripts/AI/SpawnFriendlyAfterMapComplete.cs
 using UnityEngine;
+using UnityEngine.AI;
 using System.Collections;
 
 [RequireComponent(typeof(Collider))]
@@ -110,6 +111,45 @@ public class SpawnFriendlyAfterMapComplete : MonoBehaviour
     {
         if (phase != SpawnerPhase.ReadyForTouch) return;
         if (!other.CompareTag(playerTag)) return;
+        StartCoroutine(SafeSpawnFriendly());
+    }
+
+    private IEnumerator SafeSpawnFriendly()
+    {
+        Debug.Log($"[{name}] Waiting for NavMesh to be ready before spawning friendly...");
+        
+        // Wait until NavMesh is ready (max 5 seconds - increased from 3)
+        float waitTime = 0f;
+        float maxWait = 5f;
+        float checkInterval = 0.3f;
+        
+        while (waitTime < maxWait)
+        {
+            NavMeshTriangulation triangulation = NavMesh.CalculateTriangulation();
+            if (triangulation.vertices != null && triangulation.vertices.Length > 0)
+            {
+                Debug.Log($"[{name}] NavMesh ready after {waitTime:F1}s (vertices: {triangulation.vertices.Length}), spawning friendly");
+                break;
+            }
+            
+            // Log progress every second
+            if (Mathf.FloorToInt(waitTime) != Mathf.FloorToInt(waitTime + checkInterval))
+            {
+                Debug.Log($"[{name}] Still waiting for NavMesh... ({waitTime:F1}s/{maxWait}s)");
+            }
+            
+            yield return new WaitForSeconds(checkInterval);
+            waitTime += checkInterval;
+        }
+        
+        if (waitTime >= maxWait)
+        {
+            Debug.LogError($"[{name}] NavMesh not ready after {maxWait} seconds, aborting spawn. " +
+                          "Check if your scene has NavMesh baked or NavMeshSurface components.");
+            yield break;
+        }
+        
+        // Now spawn safely
         SpawnFriendlyNow();
     }
 

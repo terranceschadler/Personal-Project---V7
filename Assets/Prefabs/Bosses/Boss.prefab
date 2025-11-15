@@ -342,6 +342,10 @@ MonoBehaviour:
   healthLootChance: 0.25
   minHealthDrops: 1
   maxHealthDrops: 1
+  ammoPrefab: {fileID: 0}
+  ammoDropChance: 0.3
+  minAmmoDrops: 1
+  maxAmmoDrops: 2
   killScore: 500
   coinsOnKillAward: 0
   materialsOnKillAward: 0
@@ -571,11 +575,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 920274944323b6448803df04f875cf33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyUpgradeDropper
-  upgradeSystem: {fileID: 0}
+  upgradePrefab: {fileID: 846759565602956284, guid: f02aeb3294c4fb8429c4516208c0a800, type: 3}
   dropChance: 0.15
-  dropOffset: {x: 0, y: 0.5, z: 0}
-  forceSpecificTier: 0
-  forcedTier: 0
-  isBoss: 1
-  bossDropChance: 0.8
-  bossDropsHigherTier: 1
+  alwaysDropFromBosses: 1
+  debugLogs: 0
+  spawnOffset: {x: 0, y: 0.5, z: 0}
+  spawnForce: 2
+  spawnTorque: {x: 1, y: 1, z: 1}
