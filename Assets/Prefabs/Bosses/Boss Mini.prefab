@@ -123,7 +123,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19c33435583a8fe4883b1b830baa5d7f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
+  maxHealth: 500
   chaseRange: 5
   damageAmount: 2
   damageRate: 1
@@ -331,7 +331,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   minScale: 1
   maxScale: 3
-  baseHealth: 100
+  baseHealth: 1000
   linearHealth: 1
   sizeToHealthCurve:
     serializedVersion: 2
@@ -357,7 +357,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  maxHealthCap: 500
+  maxHealthCap: 5000
   refillCurrentHealth: 1
   applyDelayFrames: 1
   reapplyAfterStartFrames: 2
