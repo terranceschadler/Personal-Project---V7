@@ -251,15 +251,23 @@ public class DeathUIController : MonoBehaviour
             restartButton.onClick.RemoveAllListeners();
             restartButton.onClick.AddListener(() =>
             {
-                // Unpause then reload scene
-                Time.timeScale = 1f;
-                AudioListener.pause = false;
-
                 HideImmediate();
                 if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
 
-                var current = SceneManager.GetActiveScene();
-                SceneManager.LoadScene(current.buildIndex);
+                // Use GameManager's RestartLevel to properly reset stats
+                var gm = GameManager.Instance;
+                if (gm != null)
+                {
+                    gm.RestartLevel();
+                }
+                else
+                {
+                    // Fallback if no GameManager
+                    Time.timeScale = 1f;
+                    AudioListener.pause = false;
+                    var current = SceneManager.GetActiveScene();
+                    SceneManager.LoadScene(current.buildIndex);
+                }
             });
         }
 
@@ -457,12 +465,23 @@ public class DeathUIController : MonoBehaviour
         // Buttons
         restartButton = MakeButton(buttonsGO.transform, "Restart", () =>
         {
-            Time.timeScale = 1f;
-            AudioListener.pause = false;
             HideImmediate();
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
-            var cur = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(cur.buildIndex);
+
+            // Use GameManager's RestartLevel to properly reset stats
+            var gm = GameManager.Instance;
+            if (gm != null)
+            {
+                gm.RestartLevel();
+            }
+            else
+            {
+                // Fallback if no GameManager
+                Time.timeScale = 1f;
+                AudioListener.pause = false;
+                var cur = SceneManager.GetActiveScene();
+                SceneManager.LoadScene(cur.buildIndex);
+            }
         });
 
         quitButton = MakeButton(buttonsGO.transform, "Quit", () =>
