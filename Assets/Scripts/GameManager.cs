@@ -65,6 +65,15 @@ public class GameManager : MonoBehaviour
     [Range(0f, 1f)] public float maxHealthPickupDropChance = 0.35f;
     public Vector3 maxHealthPickupOffset = new Vector3(-0.75f, 0f, -0.75f);
 
+    // Weapon Upgrade pickups (tiered by quality)
+    [Header("Boss Weapon Upgrade Pickups")]
+    [Tooltip("Epic quality upgrade prefab - drops from full bosses (highest tier).")]
+    public GameObject epicWeaponUpgradePrefab;
+    [Tooltip("Rare quality upgrade prefab - for mini bosses (middle tier).")]
+    public GameObject rareWeaponUpgradePrefab;
+    [Range(0f, 1f)] public float weaponUpgradeDropChance = 0.7f;
+    public Vector3 weaponUpgradeOffset = new Vector3(0f, 0f, -0.75f);
+
     // ---------- Helicopter Parts ----------
     [Header("Helicopter Parts Drops")]
     public GameObject helicopterPartPrefab;    // fallback
@@ -846,7 +855,8 @@ public class GameManager : MonoBehaviour
         AddScore(bossKillScoreReward);
 
         DLog("[GameManager] Boss kill #" + bossKillCount + " at " + dropPosition + ". weaponChance=" + weaponDropChance.ToString("0.##") +
-             " partChance=" + helicopterPartDropChance.ToString("0.##") + " maxHPchance=" + maxHealthPickupDropChance.ToString("0.##"));
+             " partChance=" + helicopterPartDropChance.ToString("0.##") + " maxHPchance=" + maxHealthPickupDropChance.ToString("0.##") +
+             " upgradeChance=" + weaponUpgradeDropChance.ToString("0.##"));
 
         if (UnityEngine.Random.value <= weaponDropChance)
         {
@@ -862,6 +872,10 @@ public class GameManager : MonoBehaviour
         {
             UnityEngine.Object.Instantiate(maxHealthPickupPrefab, dropPosition + maxHealthPickupOffset, Quaternion.identity);
         }
+        if (epicWeaponUpgradePrefab != null && UnityEngine.Random.value <= weaponUpgradeDropChance)
+        {
+            UnityEngine.Object.Instantiate(epicWeaponUpgradePrefab, dropPosition + weaponUpgradeOffset, Quaternion.identity);
+        }
     }
 
     public bool SpawnNextHelicopterPart(Vector3 position)
@@ -869,6 +883,22 @@ public class GameManager : MonoBehaviour
         var part = GetNextHelicopterPartPrefab();
         if (part == null) { Debug.LogWarning("[GameManager] No part available."); return false; }
         UnityEngine.Object.Instantiate(part, position, Quaternion.identity);
+        return true;
+    }
+
+    /// <summary>
+    /// Spawns a rare weapon upgrade at the given position (for mini bosses).
+    /// Returns true if upgrade was spawned.
+    /// </summary>
+    public bool SpawnRareWeaponUpgrade(Vector3 position)
+    {
+        if (rareWeaponUpgradePrefab == null)
+        {
+            Debug.LogWarning("[GameManager] No rare weapon upgrade prefab assigned!");
+            return false;
+        }
+        UnityEngine.Object.Instantiate(rareWeaponUpgradePrefab, position, Quaternion.identity);
+        DLog("[GameManager] Spawned rare weapon upgrade at " + position);
         return true;
     }
 
@@ -1082,7 +1112,7 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("[GameManager] No helicopter part prefabs assigned!");
 
         if (helicopterPartDropChance <= 0f)
-            Debug.LogWarning("[GameManager] HelicopterPartDropChance is 0 — parts will NEVER drop.");
+            Debug.LogWarning("[GameManager] HelicopterPartDropChance is 0 ï¿½ parts will NEVER drop.");
 
         bool anyWeapon =
             (bossWeaponDropPrefabs != null && bossWeaponDropPrefabs.Length > 0) ||
