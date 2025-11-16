@@ -182,10 +182,14 @@ public class MiniBoss : MonoBehaviour
         float hp = linearHealth ? (baseHealth * _chosenScale)
                                 : Mathf.Max(1f, sizeToHealthCurve.Evaluate(_chosenScale));
         if (maxHealthCap > 0f) hp = Mathf.Min(hp, maxHealthCap);
+
+        // Mini bosses have 5x the calculated health
+        hp *= 5f;
+
         _targetMax = Mathf.Max(1f, hp);
 
         if (debugLogs)
-            Debug.Log($"[MiniBoss] Computed scale={_chosenScale:0.00} targetMaxHP={_targetMax:0}");
+            Debug.Log($"[MiniBoss] Computed scale={_chosenScale:0.00} targetMaxHP={_targetMax:0} (5x multiplier applied)");
     }
 
     private void ApplyScale()
