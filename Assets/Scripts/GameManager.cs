@@ -119,21 +119,32 @@ public class GameManager : MonoBehaviour
         if (order1Based == 1 && forceFirstBossHealthEachRun && firstBossHealth > 0f)
             baseH = firstBossHealth;
 
+        float finalHealth;
         switch (bossHealthScalingMode)
         {
             case BossHealthScalingMode.Additive:
-                return Mathf.Max(1f, baseH + bossHealthAddPerBoss * (n - 1));
+                finalHealth = Mathf.Max(1f, baseH + bossHealthAddPerBoss * (n - 1));
+                break;
             case BossHealthScalingMode.Multiplicative:
                 float mul = Mathf.Max(0.01f, bossHealthMulPerBoss);
                 float factor = Mathf.Pow(mul, n - 1);
                 if (bossHealthMaxMultiplierClamp > 0f) factor = Mathf.Min(factor, bossHealthMaxMultiplierClamp);
-                return Mathf.Max(1f, baseH * factor);
+                finalHealth = Mathf.Max(1f, baseH * factor);
+                break;
             case BossHealthScalingMode.Curve:
                 float y = bossHealthCurve.Evaluate(n - 1);
                 if (y <= 0f) y = 0.01f;
-                return Mathf.Max(1f, baseH * y);
+                finalHealth = Mathf.Max(1f, baseH * y);
+                break;
+            default:
+                finalHealth = Mathf.Max(1f, baseH);
+                break;
         }
-        return Mathf.Max(1f, baseH);
+
+        // Full bosses have 10x the calculated health
+        finalHealth *= 10f;
+
+        return finalHealth;
     }
 
     public float GetNextBossHealth(float templateMaxHealth)
