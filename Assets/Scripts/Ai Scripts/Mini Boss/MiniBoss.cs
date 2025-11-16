@@ -68,6 +68,10 @@ public class MiniBoss : MonoBehaviour
     [Tooltip("Guaranteed material bonus (added to whatever your normal system does).")]
     public Vector2Int guaranteedMaterialBonusRange = new Vector2Int(10, 20);
 
+    [Header("Weapon Upgrades")]
+    [Tooltip("Chance to drop a rare weapon upgrade (0-1). Mini bosses drop better upgrades than regular enemies.")]
+    [Range(0f, 1f)] public float rareWeaponUpgradeChance = 0.6f;
+
     [Tooltip("Try to auto-subscribe to a death event on attached components (OnDeath/Died/onDeath). If not found, call NotifyKilled() from your death code.")]
     public bool autoHookDeathEvent = true;
 
@@ -335,10 +339,13 @@ public class MiniBoss : MonoBehaviour
         {
             SpawnGuaranteedCoins();
             SpawnAdditionalLoot();
-            
+
             if (debugLogs)
                 Debug.Log($"[MiniBoss] Spawned guaranteed physical loot drops (coins + health/items).");
         }
+
+        // Try to spawn rare weapon upgrade
+        SpawnRareWeaponUpgrade();
 
         // Only show error if BOTH the loot system AND fallback are disabled/missing
         if (!lootSystemWorked && !useFallbackLoot)
@@ -351,6 +358,31 @@ public class MiniBoss : MonoBehaviour
                            "  - GameManager (with coins/materials fields for currency bonuses)\n" +
                            "OR enable 'useFallbackLoot' and assign coinPrefab (required) + additionalLootPrefabs (optional) to guarantee drops.",
                            gameObject);
+        }
+    }
+
+    private void SpawnRareWeaponUpgrade()
+    {
+        if (UnityEngine.Random.value > rareWeaponUpgradeChance)
+        {
+            if (debugLogs)
+                Debug.Log($"[MiniBoss] Weapon upgrade roll failed ({UnityEngine.Random.value:F2} > {rareWeaponUpgradeChance:F2})");
+            return;
+        }
+
+        var gm = GameManager.Instance;
+        if (gm == null)
+        {
+            Debug.LogWarning("[MiniBoss] GameManager not found - cannot spawn rare weapon upgrade!");
+            return;
+        }
+
+        Vector3 spawnPos = transform.position + new Vector3(0f, 1.5f, 0f);
+        bool spawned = gm.SpawnRareWeaponUpgrade(spawnPos);
+
+        if (spawned && debugLogs)
+        {
+            Debug.Log($"[MiniBoss] <color=#4A9EFF>★ Spawned RARE weapon upgrade at {spawnPos} ★</color>");
         }
     }
 
@@ -545,7 +577,7 @@ public class MiniBoss : MonoBehaviour
     {
         try
         {
-            // Common death event names we�ll probe for (UnityEvent or C# event or Action)
+            // Common death event names we�ll probe for (UnityEvent or C# event or Action)
             string[] deathNames = { "OnDeath", "onDeath", "Died", "OnDied", "Death", "Killed", "OnKilled" };
 
             foreach (var c in GetComponents<Component>())
