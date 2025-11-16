@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 2145042164838068369}
   - component: {fileID: 716014739998966562}
   m_Layer: 0
-  m_Name: UpgradePickup
+  m_Name: UpgradePickupCommon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -69,7 +69,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 665bcaa1212de764caccb81c3dd4bde8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

@@ -385,7 +385,7 @@ MonoBehaviour:
   patrolInterval: 2
   returnThreshold: 10
   healthPickupPrefab: {fileID: 6441928423980564283, guid: cab0018b27cc99241b165ca69af30271, type: 3}
-  weaponPickupPrefab: {fileID: 94174554850615400, guid: e11237e35d7fba44abb2fe0b0aeae638, type: 3}
+  weaponPickupPrefab: {fileID: 0}
   spawner: {fileID: 0}
   bossHealthBarPrefab: {fileID: 5536732270004585410, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
   healthBarLocalOffset: {x: 0, y: 3, z: 0}

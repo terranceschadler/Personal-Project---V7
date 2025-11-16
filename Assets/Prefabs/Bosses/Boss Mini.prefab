@@ -123,7 +123,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19c33435583a8fe4883b1b830baa5d7f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 15
+  maxHealth: 100
   chaseRange: 5
   damageAmount: 2
   damageRate: 1
@@ -449,7 +449,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 920274944323b6448803df04f875cf33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyUpgradeDropper
-  upgradePrefab: {fileID: 846759565602956284, guid: f02aeb3294c4fb8429c4516208c0a800, type: 3}
+  upgradePrefab: {fileID: 846759565602956284, guid: c2ae22d04ef8b9e40af57a1ac576e599, type: 3}
   dropChance: 0.3
   alwaysDropFromBosses: 1
   debugLogs: 0
