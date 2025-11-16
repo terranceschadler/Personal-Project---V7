@@ -141,8 +141,8 @@ public class GameManager : MonoBehaviour
                 break;
         }
 
-        // Full bosses have 10x the calculated health
-        finalHealth *= 10f;
+        // Full bosses have 20x the calculated health
+        finalHealth *= 20f;
 
         return finalHealth;
     }
