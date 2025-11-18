@@ -97,6 +97,22 @@ public class MiniBoss : MonoBehaviour
     [Tooltip("Radius around mini boss to spawn fallback loot")]
     [Min(0f)] public float fallbackLootSpawnRadius = 2f;
 
+    [Header("Health Bar")]
+    [Tooltip("Health bar prefab to display above mini boss (uses same prefab as boss/player)")]
+    public GameObject healthBarPrefab;
+    [Tooltip("Local offset from mini boss pivot where the bar will appear")]
+    public Vector3 healthBarLocalOffset = new Vector3(0f, 2.5f, 0f);
+    [Tooltip("Show health bar only when taking damage")]
+    public bool showOnlyWhenDamaged = true;
+    [Tooltip("How long to keep health bar visible after last damage (seconds)")]
+    [Min(0f)] public float healthBarVisibleDuration = 3f;
+    [Tooltip("World width of the health bar canvas")]
+    [Min(0.02f)] public float barWorldWidth = 0.6f;
+    [Tooltip("World height of the health bar canvas")]
+    [Min(0.02f)] public float barWorldHeight = 0.08f;
+    [Tooltip("Always face camera (billboard effect)")]
+    public bool billboardHealthBar = true;
+
     [Header("Diagnostics")]
     public bool debugLogs = true;
 
@@ -110,6 +126,16 @@ public class MiniBoss : MonoBehaviour
     private ILootAdapter _loot;
     private bool _lootGrantedThisLifecycle = false; // safety against double drops
 
+    // Health bar internals
+    private Transform _hbTransform;
+    private UnityEngine.UI.Slider _hbSlider;
+    private UnityEngine.UI.Image _hbFilledImage;
+    private Canvas _hbCanvas;
+    private RectTransform _hbCanvasRT;
+    private Camera _mainCam;
+    private float _lastDamageTime = -999f;
+    private EnemyController _enemyController;
+
     void Awake()
     {
         _health = HealthAdapter.TryCreate(gameObject, debugLogs);
@@ -117,6 +143,21 @@ public class MiniBoss : MonoBehaviour
         if (!_aligner && autoAddAligner) _aligner = gameObject.AddComponent<MeshFeetAlignToAgentBase>();
 
         _loot = LootAdapter.TryCreate(gameObject, debugLogs);
+
+        // Get reference to EnemyController to hook into damage events
+        _enemyController = GetComponent<EnemyController>();
+        if (_enemyController == null && debugLogs)
+        {
+            Debug.LogWarning($"[MiniBoss] No EnemyController found on '{gameObject.name}' - health bar won't update on damage!");
+        }
+
+        // Auto-add health bar handler if health bar is configured
+        if (healthBarPrefab != null && GetComponent<MiniBossHealthBarHandler>() == null)
+        {
+            gameObject.AddComponent<MiniBossHealthBarHandler>();
+            if (debugLogs)
+                Debug.Log($"[MiniBoss] Auto-added MiniBossHealthBarHandler to '{gameObject.name}'");
+        }
 
         if (autoHookDeathEvent)
         {
@@ -135,7 +176,48 @@ public class MiniBoss : MonoBehaviour
     void OnEnable()
     {
         _lootGrantedThisLifecycle = false; // reset for pooled spawns
+        _lastDamageTime = -999f; // reset damage timer
+
+        if (_mainCam == null) _mainCam = Camera.main;
+
+        // Create health bar when mini boss spawns
+        EnsureHealthBarExists();
+        UpdateHealthBarValue();
+
         StartCoroutine(CoApplyAll());
+    }
+
+    void OnDisable()
+    {
+        SafeDestroyHealthBar();
+    }
+
+    void Update()
+    {
+        UpdateHealthBarVisibility();
+    }
+
+    void LateUpdate()
+    {
+        // Update health bar position and rotation
+        if (_hbTransform != null)
+        {
+            _hbTransform.localPosition = healthBarLocalOffset;
+
+            // Billboard effect - always face camera
+            if (billboardHealthBar)
+            {
+                if (_mainCam == null) _mainCam = Camera.main;
+                if (_mainCam != null)
+                {
+                    _hbTransform.rotation = Quaternion.LookRotation(-_mainCam.transform.forward, Vector3.up);
+                }
+            }
+
+            ApplyHealthBarScale();
+        }
+
+        UpdateHealthBarValue();
     }
 
     // ---------------- Back-compat for existing spawners ----------------
@@ -701,6 +783,186 @@ public class MiniBoss : MonoBehaviour
         if (debugLogs)
             Debug.Log($"[MiniBoss] OnDeathDetected() triggered on '{gameObject.name}' - calling NotifyKilled()", gameObject);
         NotifyKilled();
+    }
+
+    // ---------- Health Bar System ----------
+
+    /// <summary>
+    /// Call this when mini boss takes damage to show health bar
+    /// </summary>
+    public void OnMiniBossDamaged()
+    {
+        _lastDamageTime = Time.time;
+
+        // Make health bar visible when taking damage
+        if (_hbTransform != null && showOnlyWhenDamaged)
+        {
+            _hbTransform.gameObject.SetActive(true);
+        }
+
+        UpdateHealthBarValue();
+    }
+
+    private void EnsureHealthBarExists()
+    {
+        if (_hbTransform != null) return;
+
+        if (healthBarPrefab == null)
+        {
+            if (debugLogs)
+                Debug.LogWarning($"[MiniBoss] healthBarPrefab is NULL on '{name}' - no health bar will spawn.");
+            return;
+        }
+
+        GameObject hb = Instantiate(healthBarPrefab);
+        hb.name = $"{name}_MiniBossHealthBar";
+        hb.transform.SetParent(transform, worldPositionStays: false);
+        hb.transform.localPosition = healthBarLocalOffset;
+        hb.transform.localRotation = Quaternion.identity;
+
+        // Normalize scales to prevent gigantic bars
+        NormalizeLocalScalesRecursive(hb.transform);
+
+        // Force Canvas to World Space and set real world size
+        _hbCanvas = hb.GetComponentInChildren<Canvas>(true);
+        if (_hbCanvas != null)
+        {
+            _hbCanvas.renderMode = RenderMode.WorldSpace;
+            _hbCanvasRT = _hbCanvas.GetComponent<RectTransform>();
+            if (_hbCanvasRT != null)
+            {
+                _hbCanvasRT.sizeDelta = new Vector2(barWorldWidth, barWorldHeight);
+            }
+        }
+
+        // Keep on same layer as mini boss
+        hb.layer = gameObject.layer;
+
+        _hbTransform = hb.transform;
+        _hbSlider = hb.GetComponentInChildren<UnityEngine.UI.Slider>(true);
+        _hbFilledImage = FindFirstFilledImage(hb);
+
+        // Initially hide if configured to show only when damaged
+        if (showOnlyWhenDamaged)
+        {
+            hb.SetActive(false);
+        }
+
+        UpdateHealthBarValue();
+        ApplyHealthBarScale();
+
+        if (_hbSlider == null && _hbFilledImage == null && debugLogs)
+            Debug.LogWarning($"[MiniBoss] Health bar prefab has neither Slider nor Filled Image.", hb);
+
+        if (debugLogs)
+            Debug.Log($"[MiniBoss] Health bar created for '{name}'");
+    }
+
+    private static void NormalizeLocalScalesRecursive(Transform root)
+    {
+        root.localScale = Vector3.one;
+        for (int i = 0; i < root.childCount; i++)
+            NormalizeLocalScalesRecursive(root.GetChild(i));
+    }
+
+    private UnityEngine.UI.Image FindFirstFilledImage(GameObject root)
+    {
+        var imgs = root.GetComponentsInChildren<UnityEngine.UI.Image>(true);
+        for (int i = 0; i < imgs.Length; i++)
+        {
+            if (imgs[i] != null && imgs[i].type == UnityEngine.UI.Image.Type.Filled)
+                return imgs[i];
+        }
+        return null;
+    }
+
+    private void UpdateHealthBarValue()
+    {
+        if (_hbSlider == null && _hbFilledImage == null) return;
+
+        float maxHp = Mathf.Max(1f, GetMaxHealth());
+        float hp = Mathf.Clamp(GetCurrentHealth(), 0f, maxHp);
+        float ratio = hp / maxHp;
+
+        if (_hbSlider != null)
+        {
+            if (!Mathf.Approximately(_hbSlider.maxValue, maxHp)) _hbSlider.maxValue = maxHp;
+            if (!Mathf.Approximately(_hbSlider.value, hp)) _hbSlider.value = hp;
+        }
+
+        if (_hbFilledImage != null)
+        {
+            if (!Mathf.Approximately(_hbFilledImage.fillAmount, ratio))
+                _hbFilledImage.fillAmount = ratio;
+        }
+    }
+
+    private void UpdateHealthBarVisibility()
+    {
+        if (!showOnlyWhenDamaged || _hbTransform == null) return;
+
+        // Hide health bar after duration expires
+        float timeSinceLastDamage = Time.time - _lastDamageTime;
+        if (timeSinceLastDamage > healthBarVisibleDuration && _hbTransform.gameObject.activeSelf)
+        {
+            _hbTransform.gameObject.SetActive(false);
+        }
+    }
+
+    private void ApplyHealthBarScale()
+    {
+        if (_hbTransform == null) return;
+
+        // Cancel parent (mini boss) scale so bar remains constant size
+        Vector3 parent = transform.lossyScale;
+        Vector3 invParent = new Vector3(
+            parent.x != 0 ? 1f / parent.x : 1f,
+            parent.y != 0 ? 1f / parent.y : 1f,
+            parent.z != 0 ? 1f / parent.z : 1f
+        );
+
+        // Safe clamps
+        float minS = 0.0001f, maxS = 10f;
+        invParent.x = Mathf.Clamp(invParent.x, minS, maxS);
+        invParent.y = Mathf.Clamp(invParent.y, minS, maxS);
+        invParent.z = Mathf.Clamp(invParent.z, minS, maxS);
+
+        _hbTransform.localScale = invParent;
+    }
+
+    private void SafeDestroyHealthBar()
+    {
+        if (_hbTransform != null)
+        {
+            Destroy(_hbTransform.gameObject);
+            _hbTransform = null;
+            _hbSlider = null;
+            _hbFilledImage = null;
+            _hbCanvas = null;
+            _hbCanvasRT = null;
+        }
+    }
+
+    private float GetMaxHealth()
+    {
+        if (_enemyController != null)
+            return _enemyController.maxHealth;
+        return _targetMax;
+    }
+
+    private float GetCurrentHealth()
+    {
+        // Use reflection to get current health from EnemyController
+        if (_enemyController != null)
+        {
+            var field = typeof(EnemyController).GetField("currentHealth",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Public);
+            if (field != null)
+                return (float)field.GetValue(_enemyController);
+        }
+        return 0f;
     }
 
     // ----------------- Health Adapter -----------------
