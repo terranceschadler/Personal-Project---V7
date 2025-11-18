@@ -41,20 +41,26 @@ public class WeaponUpgradePickup : PickupBase
         var player = collector.GetComponent<PlayerController>();
         if (player == null) return false;
 
+        // Get the weapon controller
+        var weaponController = player.weaponUpgradeController;
+        if (weaponController == null) return false;
+
         // Calculate actual bonuses based on quality
         float qualityMultiplier = GetQualityMultiplier();
         float damageBonus = baseDamageBonus * qualityMultiplier;
         int scoreReward = Mathf.RoundToInt(baseScoreReward * GetScoreMultiplier());
 
-        // Increase base bullet damage
+        // Increase weapon damage through the weapon controller
         if (damageBonus > 0f)
         {
-            player.bulletDamage += damageBonus;
+            // This assumes PlayerWeaponController has a method to add damage bonuses
+            // You'll need to implement AddDamageBonus in PlayerWeaponController
+            weaponController.AddDamageBonus(damageBonus);
 
             if (showQualityInLog)
             {
                 string colorCode = GetQualityColor();
-                Debug.Log($"<color={colorCode}>[{quality} Weapon Upgrade]</color> Damage +{damageBonus:F1} (now {player.bulletDamage:F1})");
+                Debug.Log($"<color={colorCode}>[{quality} Weapon Upgrade]</color> Damage +{damageBonus:F1}");
             }
         }
 
@@ -65,10 +71,8 @@ public class WeaponUpgradePickup : PickupBase
             if (gm != null) gm.AddScore(scoreReward);
         }
 
-        // Note: Fire rate and bullet speed are per-weapon (ScriptableObject) properties,
-        // which are shared assets. To upgrade those, we'd need runtime weapon instances.
-        // For now, we only upgrade the player's bulletDamage which affects all shots.
-        // Future enhancement: track per-player multipliers for fire rate/speed.
+        // Note: Fire rate and bullet speed upgrades would also go through weaponController
+        // Future enhancement: weaponController.AddFireRateBonus(), AddBulletSpeedBonus()
 
         return true;
     }
