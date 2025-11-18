@@ -13,7 +13,7 @@ public class MiniBoss : MonoBehaviour
 
     [Header("Health Scaling")]
     [Tooltip("Base HP at scale = 1.0")]
-    [Min(1f)] public float baseHealth = 200f;
+    [Min(1f)] public float baseHealth = 75f;
     [Tooltip("If true, health = baseHealth * scale. If false, use sizeToHealthCurve.")]
     public bool linearHealth = true;
     [Tooltip("If linearHealth=false, evaluated at x = chosen scale.")]
@@ -147,12 +147,43 @@ public class MiniBoss : MonoBehaviour
             Debug.LogWarning($"[MiniBoss] No EnemyController found on '{gameObject.name}' - health bar won't update on damage!");
         }
 
-        // Auto-add health bar handler if health bar is configured
-        if (healthBarPrefab != null && GetComponent<MiniBossHealthBarHandler>() == null)
+        // Try to auto-load health bar prefab if not assigned
+        if (healthBarPrefab == null)
+        {
+            // Try to find health bar prefab from existing BossEnemy in scene
+            var existingBoss = FindObjectOfType<BossEnemy>();
+            if (existingBoss != null && existingBoss.bossHealthBarPrefab != null)
+            {
+                healthBarPrefab = existingBoss.bossHealthBarPrefab;
+                if (debugLogs)
+                    Debug.Log($"[MiniBoss] Borrowed health bar prefab from BossEnemy for '{gameObject.name}'");
+            }
+
+            // Fallback: try Resources folder
+            if (healthBarPrefab == null)
+            {
+                healthBarPrefab = Resources.Load<GameObject>("Healthbar");
+                if (healthBarPrefab == null)
+                    healthBarPrefab = Resources.Load<GameObject>("Prefabs/Healthbar");
+
+                if (healthBarPrefab != null && debugLogs)
+                    Debug.Log($"[MiniBoss] Auto-loaded health bar prefab from Resources for '{gameObject.name}'");
+            }
+        }
+
+        // Always add health bar handler so it's ready when prefab is assigned
+        if (GetComponent<MiniBossHealthBarHandler>() == null)
         {
             gameObject.AddComponent<MiniBossHealthBarHandler>();
             if (debugLogs)
                 Debug.Log($"[MiniBoss] Auto-added MiniBossHealthBarHandler to '{gameObject.name}'");
+        }
+
+        // Warn if health bar prefab is still not assigned
+        if (healthBarPrefab == null)
+        {
+            Debug.LogWarning($"[MiniBoss] healthBarPrefab not assigned on '{gameObject.name}'. " +
+                           "Assign a health bar prefab in the inspector or place 'Healthbar.prefab' in a Resources folder.");
         }
 
         if (autoHookDeathEvent)
