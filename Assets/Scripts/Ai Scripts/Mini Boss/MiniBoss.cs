@@ -13,7 +13,7 @@ public class MiniBoss : MonoBehaviour
 
     [Header("Health Scaling")]
     [Tooltip("Base HP at scale = 1.0")]
-    [Min(1f)] public float baseHealth = 200f;
+    [Min(1f)] public float baseHealth = 75f;
     [Tooltip("If true, health = baseHealth * scale. If false, use sizeToHealthCurve.")]
     public bool linearHealth = true;
     [Tooltip("If linearHealth=false, evaluated at x = chosen scale.")]
@@ -107,9 +107,11 @@ public class MiniBoss : MonoBehaviour
     [Tooltip("How long to keep health bar visible after last damage (seconds)")]
     [Min(0f)] public float healthBarVisibleDuration = 3f;
     [Tooltip("World width of the health bar canvas")]
-    [Min(0.02f)] public float barWorldWidth = 0.6f;
+    [Min(0.02f)] public float barWorldWidth = 0.5f;
     [Tooltip("World height of the health bar canvas")]
-    [Min(0.02f)] public float barWorldHeight = 0.08f;
+    [Min(0.02f)] public float barWorldHeight = 0.06f;
+    [Tooltip("Scale multiplier for the health bar (use small values like 0.01)")]
+    [Range(0.001f, 0.1f)] public float healthBarScale = 0.01f;
     [Tooltip("Always face camera (billboard effect)")]
     public bool billboardHealthBar = true;
 
@@ -151,12 +153,43 @@ public class MiniBoss : MonoBehaviour
             Debug.LogWarning($"[MiniBoss] No EnemyController found on '{gameObject.name}' - health bar won't update on damage!");
         }
 
-        // Auto-add health bar handler if health bar is configured
-        if (healthBarPrefab != null && GetComponent<MiniBossHealthBarHandler>() == null)
+        // Try to auto-load health bar prefab if not assigned
+        if (healthBarPrefab == null)
+        {
+            // Try to find health bar prefab from existing BossEnemy in scene
+            var existingBoss = FindObjectOfType<BossEnemy>();
+            if (existingBoss != null && existingBoss.bossHealthBarPrefab != null)
+            {
+                healthBarPrefab = existingBoss.bossHealthBarPrefab;
+                if (debugLogs)
+                    Debug.Log($"[MiniBoss] Borrowed health bar prefab from BossEnemy for '{gameObject.name}'");
+            }
+
+            // Fallback: try Resources folder
+            if (healthBarPrefab == null)
+            {
+                healthBarPrefab = Resources.Load<GameObject>("Healthbar");
+                if (healthBarPrefab == null)
+                    healthBarPrefab = Resources.Load<GameObject>("Prefabs/Healthbar");
+
+                if (healthBarPrefab != null && debugLogs)
+                    Debug.Log($"[MiniBoss] Auto-loaded health bar prefab from Resources for '{gameObject.name}'");
+            }
+        }
+
+        // Always add health bar handler so it's ready when prefab is assigned
+        if (GetComponent<MiniBossHealthBarHandler>() == null)
         {
             gameObject.AddComponent<MiniBossHealthBarHandler>();
             if (debugLogs)
                 Debug.Log($"[MiniBoss] Auto-added MiniBossHealthBarHandler to '{gameObject.name}'");
+        }
+
+        // Warn if health bar prefab is still not assigned
+        if (healthBarPrefab == null)
+        {
+            Debug.LogWarning($"[MiniBoss] healthBarPrefab not assigned on '{gameObject.name}'. " +
+                           "Assign a health bar prefab in the inspector or place 'Healthbar.prefab' in a Resources folder.");
         }
 
         if (autoHookDeathEvent)
@@ -828,6 +861,14 @@ public class MiniBoss : MonoBehaviour
         if (_hbCanvas != null)
         {
             _hbCanvas.renderMode = RenderMode.WorldSpace;
+
+            // Disable CanvasScaler if present - it causes sizing issues in world space
+            var scaler = _hbCanvas.GetComponent<UnityEngine.UI.CanvasScaler>();
+            if (scaler != null)
+            {
+                scaler.enabled = false;
+            }
+
             _hbCanvasRT = _hbCanvas.GetComponent<RectTransform>();
             if (_hbCanvasRT != null)
             {
@@ -921,13 +962,16 @@ public class MiniBoss : MonoBehaviour
             parent.z != 0 ? 1f / parent.z : 1f
         );
 
+        // Apply the healthBarScale multiplier to get correct world size
+        Vector3 targetScale = invParent * healthBarScale;
+
         // Safe clamps
         float minS = 0.0001f, maxS = 10f;
-        invParent.x = Mathf.Clamp(invParent.x, minS, maxS);
-        invParent.y = Mathf.Clamp(invParent.y, minS, maxS);
-        invParent.z = Mathf.Clamp(invParent.z, minS, maxS);
+        targetScale.x = Mathf.Clamp(targetScale.x, minS, maxS);
+        targetScale.y = Mathf.Clamp(targetScale.y, minS, maxS);
+        targetScale.z = Mathf.Clamp(targetScale.z, minS, maxS);
 
-        _hbTransform.localScale = invParent;
+        _hbTransform.localScale = targetScale;
     }
 
     private void SafeDestroyHealthBar()
