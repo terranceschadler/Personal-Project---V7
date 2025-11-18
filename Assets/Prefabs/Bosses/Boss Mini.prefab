@@ -386,6 +386,13 @@ MonoBehaviour:
   - {fileID: 6441928423980564283, guid: cab0018b27cc99241b165ca69af30271, type: 3}
   additionalLootCount: 2
   fallbackLootSpawnRadius: 2
+  healthBarPrefab: {fileID: 5536732270004585410, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
+  healthBarLocalOffset: {x: 0, y: 2.5, z: 0}
+  showOnlyWhenDamaged: 1
+  healthBarVisibleDuration: 3
+  barWorldWidth: 0.6
+  barWorldHeight: 0.08
+  billboardHealthBar: 1
   debugLogs: 0
 --- !u!114 &2824275960644675723
 MonoBehaviour:
