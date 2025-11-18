@@ -331,7 +331,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   minScale: 1
   maxScale: 3
-  baseHealth: 1000
+  baseHealth: 500
   linearHealth: 1
   sizeToHealthCurve:
     serializedVersion: 2
@@ -357,7 +357,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  maxHealthCap: 5000
+  maxHealthCap: 2500
   refillCurrentHealth: 1
   applyDelayFrames: 1
   reapplyAfterStartFrames: 2
@@ -376,6 +376,7 @@ MonoBehaviour:
   extraLootRolls: 1
   guaranteedCoinBonusRange: {x: 20, y: 50}
   guaranteedMaterialBonusRange: {x: 10, y: 20}
+  rareWeaponUpgradeChance: 0.6
   autoHookDeathEvent: 1
   useFallbackLoot: 1
   coinPrefab: {fileID: 2734191600132634701, guid: 040793db376723149868613c2f37a640, type: 3}

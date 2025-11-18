@@ -34,6 +34,9 @@ public class PlayerWeaponController : MonoBehaviour
     // Upgrades record
     private List<UpgradePickup> appliedUpgrades = new List<UpgradePickup>();
 
+    // Damage bonus from weapon upgrade pickups (separate from upgrade system)
+    private float damageBonus = 0f;
+
     // ---------------- Reserve Ammo System ----------------
     [Header("Ammo Reserve")]
     [Tooltip("Maximum reserve ammo the player can hold (outside of the magazine).")]
@@ -144,7 +147,20 @@ public class PlayerWeaponController : MonoBehaviour
         EnhancedBullet enhancedBullet = bulletObj.GetComponent<EnhancedBullet>();
         if (enhancedBullet != null)
         {
-            enhancedBullet.InitializeWithStats(gameObject, currentStats);
+            // If we have a damage bonus, we need to apply it to the stats
+            // Since EnhancedBullet.damage is private, we modify the stats before passing them
+            if (damageBonus > 0f)
+            {
+                // Temporarily add bonus to base damage for this bullet
+                float originalBaseDamage = currentStats.baseDamage;
+                currentStats.baseDamage += damageBonus;
+                enhancedBullet.InitializeWithStats(gameObject, currentStats);
+                currentStats.baseDamage = originalBaseDamage; // Restore immediately
+            }
+            else
+            {
+                enhancedBullet.InitializeWithStats(gameObject, currentStats);
+            }
         }
         else
         {
@@ -152,7 +168,8 @@ public class PlayerWeaponController : MonoBehaviour
             if (legacyBullet != null)
             {
                 legacyBullet.Initialize(gameObject);
-                legacyBullet.damage = currentStats.GetTotalDamage();
+                // Apply base damage + bonus from weapon upgrade pickups
+                legacyBullet.damage = currentStats.GetTotalDamage() + damageBonus;
                 legacyBullet.speed = currentStats.GetTotalVelocity();
                 legacyBullet.lifetime = currentStats.GetTotalLifetime();
             }
@@ -273,6 +290,14 @@ public class PlayerWeaponController : MonoBehaviour
         }
     }
 
+    // ---------------- WEAPON UPGRADE PICKUPS ----------------
+    public void AddDamageBonus(float bonus)
+    {
+        damageBonus += bonus;
+        if (showDebugInfo)
+            Debug.Log($"[PlayerWeaponController] Damage bonus increased by {bonus:F1}. Total bonus: {damageBonus:F1}");
+    }
+
     // ---------------- GETTERS ----------------
     public List<UpgradePickup> GetAppliedUpgrades() => new List<UpgradePickup>(appliedUpgrades);
     public WeaponStats GetCurrentStats() => currentStats;
@@ -281,4 +306,6 @@ public class PlayerWeaponController : MonoBehaviour
     public int GetReserveAmmo() => reserveAmmo;
     public int GetMaxReserveAmmo() => maxReserveAmmo;
     public bool IsReloading() => isReloading;
+    public float GetDamageBonus() => damageBonus;
+    public float GetTotalDamage() => currentStats.GetTotalDamage() + damageBonus;
 }
