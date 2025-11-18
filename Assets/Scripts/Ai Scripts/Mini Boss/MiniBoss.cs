@@ -106,8 +106,8 @@ public class MiniBoss : MonoBehaviour
     [Min(0.02f)] public float barWorldWidth = 0.5f;
     [Tooltip("World height of the health bar canvas")]
     [Min(0.02f)] public float barWorldHeight = 0.06f;
-    [Tooltip("Scale multiplier for the health bar (use small values like 0.01)")]
-    [Range(0.001f, 0.1f)] public float healthBarScale = 0.01f;
+    [Tooltip("Scale multiplier for the health bar (smaller = smaller bar)")]
+    public float healthBarScale = 0.003f;
     [Tooltip("Always face camera (billboard effect)")]
     public bool billboardHealthBar = true;
 
