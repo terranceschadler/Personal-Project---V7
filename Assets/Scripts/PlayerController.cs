@@ -8,35 +8,21 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed = 5f;
     public float maxHealth = 100f;
 
-    [Header("Combat")]
+    [Header("Combat (New System)")]
     public Transform firePoint;
-    public LayerMask groundLayer;        // should include your walkable floor
-    public Weapon startingWeapon;
-
-    [Header("Combat Stats")]
-    [Tooltip("Base damage per bullet for weapons that don't define their own damage.")]
-    public float bulletDamage = 10f;
+    public LayerMask groundLayer;
+    public PlayerWeaponController weaponUpgradeController;
 
     [Header("Audio / VFX")]
-    public AudioClip shootClip;
-    [Range(0f, 1f)] public float shootVolume = 0.8f;
     public AudioSource audioSource;
-    public ParticleSystem muzzleFlash;
-    public GameObject muzzleFlashPrefab;
-    public float muzzleFlashLifetime = 0.25f;
-
-    [Header("Muzzle Flash Light")]
     public Light muzzleFlashLight;
     public float flashDuration = 0.05f;
     private float flashTimer = 0f;
 
     [Header("Health Bar")]
     public GameObject healthBarPrefab;
-    [Tooltip("World-space offset from the player pivot to place the health bar.")]
     public Vector3 healthBarOffset = new Vector3(0f, 2f, 0f);
-    [Tooltip("Optional: scale applied to the spawned health bar root.")]
     public Vector3 healthBarScale = Vector3.one;
-    [Tooltip("Optional: smooth the follow position for the health bar (seconds to reach ~63%). 0 = snap.")]
     [Min(0f)] public float healthBarFollowSmoothing = 0f;
 
     [Header("Movement Physics")]
@@ -61,13 +47,9 @@ public class PlayerController : MonoBehaviour
     public float stepOffset = 0.25f;
 
     [Header("Gamepad (Right Trigger Mapping)")]
-    [Tooltip("Name of the combined trigger axis in Input Manager.")]
     public string triggerAxisName = "Triggers";
-    [Tooltip("Flip the sign of the combined trigger axis before processing.")]
     public bool invertTriggerAxis = false;
-    [Tooltip("If true, RT is the POSITIVE side of the combined axis; if false, RT is the NEGATIVE side.")]
     public bool rtIsPositive = true;
-    [Tooltip("Fire when RT (derived 0..1) exceeds this value.")]
     [Range(0f, 1f)] public float rtFireThreshold = 0.35f;
 
     [Header("Aim (Stick vs Mouse Priority)")]
@@ -76,47 +58,30 @@ public class PlayerController : MonoBehaviour
     [Range(0.1f, 8f)] public float mouseMovePixelsThreshold = 1.0f;
 
     [Header("Stick Snap")]
-    [Tooltip("When the stick returns to zero, snap/hold the last stick direction briefly.")]
     public bool snapStickWhenZero = true;
     [Range(0.0f, 0.6f)] public float stickSnapHoldDuration = 0.18f;
 
-    // ??????????????? DASH ???????????????
     [Header("Dash")]
     public bool dashEnabled = true;
-    [Tooltip("Multiplies base moveSpeed while dashing.")]
     public float dashSpeedMultiplier = 3.0f;
-    [Tooltip("Seconds the dash persists.")]
     public float dashDuration = 0.22f;
-    [Tooltip("Cooldown between dashes in seconds.")]
     public float dashCooldown = 0.85f;
-    [Tooltip("Optional easing (0..1 normalized time). If null, flat speed.")]
     public AnimationCurve dashSpeedCurve = AnimationCurve.EaseInOut(0, 1, 1, 1);
-    [Tooltip("Keyboard fallback if no 'Dash' input is set.")]
     public KeyCode dashKey = KeyCode.LeftShift;
-    [Tooltip("Optional invincibility during dash (seconds). 0 = off.")]
     public float dashIFrames = 0.18f;
-
-    [Header("Dash Direction Controls")]
-    [Tooltip("Require some movement to dash. If true and you're not moving, dash won't fire.")]
     public bool requireMoveForDash = true;
-    [Tooltip("Minimum movement speed (m/s) to consider the player 'moving' for dash direction.")]
     public float minDashMoveSpeed = 0.15f;
-    [Tooltip("If true, rotate the player to face the dash direction at dash start.")]
     public bool faceDashDirection = false;
-
-    [Header("Dash VFX/SFX (optional)")]
     public AudioClip dashClip;
     [Range(0f, 1f)] public float dashVolume = 0.8f;
     public ParticleSystem dashVfx;
 
     [Header("Debug / Diagnostics")]
-    [Tooltip("Enable verbose info logs in Console (warnings/errors always show).")]
     public bool debugLogs = false;
 
     private float currentHealth;
     private Camera mainCamera;
     private float nextFireTime = 0f;
-    private Weapon currentWeapon;
 
     private Image healthFill;
     private Transform healthBarTransform;
@@ -150,7 +115,17 @@ public class PlayerController : MonoBehaviour
     // Public read-only for other systems
     public bool IsDashing => isDashing;
 
-    // ---------- Debug helpers ----------
+    // --- Input availability probes ---
+    private bool triggerAxisAvailable = false;
+    private bool dashButtonAvailable = false;
+
+    // --- Grounding perf helpers (NonAlloc + throttling) ---
+    private RaycastHit[] _groundHits = new RaycastHit[2];
+    private int _groundProbeInterval = 2;     // probe every Nth frame
+    private int _groundProbeCountdown = 0;
+    private Vector3 _lastGroundPoint;
+    private Vector3 _lastGroundNormal = Vector3.up;
+
     private void DLog(string msg) { if (debugLogs) Debug.Log(msg, this); }
     private void DLogFormat(string fmt, params object[] args) { if (debugLogs) Debug.LogFormat(this, fmt, args); }
 
@@ -160,10 +135,11 @@ public class PlayerController : MonoBehaviour
         mainCamera = Camera.main;
         currentHealth = maxHealth;
 
-        // Unstick on spawn
-        controller.enabled = false;
-        transform.position += Vector3.up * spawnUnstickUp;
-        controller.enabled = true;
+        // Unstick on spawn WITHOUT toggling the controller (avoids tiny stalls)
+        if (spawnUnstickUp > 0f)
+        {
+            controller.Move(Vector3.up * spawnUnstickUp);
+        }
 
         // Controller tuning
         controller.minMoveDistance = 0f;
@@ -187,26 +163,56 @@ public class PlayerController : MonoBehaviour
 
         if (muzzleFlashLight != null) muzzleFlashLight.enabled = false;
 
-        EquipWeapon(startingWeapon);
+        // New weapon system
+        if (weaponUpgradeController == null)
+            weaponUpgradeController = GetComponent<PlayerWeaponController>();
+
+        if (weaponUpgradeController != null)
+        {
+            DLog("[PlayerController] New Weapon System active.");
+        }
+        else
+        {
+            Debug.LogError("[PlayerController] No PlayerWeaponController found!");
+        }
 
         _lastMousePos = Input.mousePosition;
         _mousePriorityUntil = _stickPriorityUntil = 0f;
         _lastStickDir = transform.forward;
+
+        // Probe optional inputs ONCE
+        try { _ = Input.GetAxis(triggerAxisName); triggerAxisAvailable = true; } catch { triggerAxisAvailable = false; }
+        try { _ = Input.GetButton("Dash"); dashButtonAvailable = true; } catch { dashButtonAvailable = false; }
+
+        // Seed ground cache
+        _lastGroundPoint = transform.position + Vector3.down * 0.5f;
+        _lastGroundNormal = Vector3.up;
+        _groundProbeCountdown = 0;
     }
 
     void Update()
     {
-        HandleMovement(); // (includes dash evaluation + application)
+        HandleMovement(); // includes dash evaluation + application
         AimWithPriorityAndSnap();
 
         // Mouse (Fire1) OR Right Trigger
         bool wantsMouseFire = Input.GetButton("Fire1");
         bool wantsRT = ReadRightTrigger01() > rtFireThreshold;
 
-        if ((wantsMouseFire || wantsRT) && Time.time >= nextFireTime && currentWeapon != null)
+        if ((wantsMouseFire || wantsRT) && Time.time >= nextFireTime && weaponUpgradeController != null)
         {
-            Shoot();
-            nextFireTime = Time.time + 1f / currentWeapon.fireRate;
+            if (weaponUpgradeController.CanFire())
+            {
+                weaponUpgradeController.Fire();
+                nextFireTime = Time.time + (1f / weaponUpgradeController.GetFireRate());
+
+                // Optional visual ping
+                if (muzzleFlashLight != null)
+                {
+                    muzzleFlashLight.enabled = true;
+                    flashTimer = flashDuration;
+                }
+            }
         }
 
         // Muzzle flash light timer
@@ -231,301 +237,213 @@ public class PlayerController : MonoBehaviour
             }
 
             if (mainCamera != null)
-                healthBarTransform.rotation = mainCamera.transform.rotation;
+                healthBarTransform.rotation = Quaternion.LookRotation(healthBarTransform.position - mainCamera.transform.position);
         }
 
-        // Invulnerability timeout
+        // Decrement invulnerability if needed
         if (isInvulnerable && Time.time >= invulnEndTime)
             isInvulnerable = false;
 
         _lastMousePos = Input.mousePosition;
-
-        DLog($"[PlayerController] grounded={grounded} planMag={new Vector2(planar.x, planar.z).magnitude:F2} trigRaw={SafeGetAxis(triggerAxisName):F2} rt01={ReadRightTrigger01():F2} dash={(isDashing ? "YES" : "no")}");
     }
 
-    // ---- Trigger reading (robust) ----
+    // ---------------- MOVEMENT / DASH ----------------
     float ReadRightTrigger01()
     {
-        float t = SafeGetAxis(triggerAxisName); // -1..+1 combined
-        if (invertTriggerAxis) t = -t;
-        return rtIsPositive ? Mathf.Max(0f, t) : Mathf.Max(0f, -t);
+        if (!triggerAxisAvailable) return 0f;
+
+        float axisVal = Input.GetAxis(triggerAxisName);
+        if (invertTriggerAxis) axisVal = -axisVal;
+
+        float rt = rtIsPositive ? Mathf.Max(0f, axisVal) : Mathf.Max(0f, -axisVal);
+        return Mathf.Clamp01(rt);
     }
 
-    float SafeGetAxis(string name)
-    {
-        try { return Input.GetAxis(name); }
-        catch { return 0f; }
-    }
-
-    bool SafeGetButtonDown(string name)
-    {
-        try { return Input.GetButtonDown(name); }
-        catch { return false; }
-    }
-
-    // ---------------- SHOOTING ----------------
-    void Shoot()
-    {
-        if (currentWeapon == null || firePoint == null) return;
-
-        TriggerShotEffects();
-
-        for (int i = 0; i < currentWeapon.bulletsPerShot; i++)
-        {
-            // Spread
-            Quaternion spreadRotation = firePoint.rotation;
-            if (currentWeapon.spreadAngle > 0f)
-            {
-                float angle = Random.Range(-currentWeapon.spreadAngle, currentWeapon.spreadAngle);
-                spreadRotation *= Quaternion.Euler(0f, angle, 0f);
-            }
-
-            Vector3 dir = spreadRotation * Vector3.forward;
-
-            // --- Ricochet path ---
-            if (currentWeapon is RicochetCarbine rc)
-            {
-                GameObject go = Instantiate(rc.bulletPrefab, firePoint.position, Quaternion.LookRotation(dir, Vector3.up));
-
-                // Ensure the projectile has a RicochetBullet (add if prefab doesn't include it)
-                if (!go.TryGetComponent<RicochetBullet>(out var rico))
-                    rico = go.AddComponent<RicochetBullet>();
-
-                // Tag ownership for your damage gating
-                rico.Initialize(gameObject);
-
-                // Feed config (maps 1:1 to RicochetCarbine fields)
-                rico.InitializeRicochet(
-                    owner: gameObject,
-                    startDamage: bulletDamage,
-                    startSpeed: currentWeapon.bulletSpeed,
-                    dir: dir,
-                    maxBounces: rc.maxBounces,
-                    speedLossPerBounce: rc.speedLossPerBounce,
-                    damageLossPerBounce: rc.damageLossPerBounce,
-                    ricochetSurfaces: rc.ricochetSurfaces,
-                    enemyLayers: rc.enemyLayers,
-                    ignoreLayers: rc.ignoreLayers,
-                    biasRicochetTowardTargets: rc.biasRicochetTowardTargets,
-                    ricochetAimCone: rc.ricochetAimCone,
-                    ricochetTargetSearchRadius: rc.ricochetTargetSearchRadius,
-                    minSpeedToContinue: rc.minSpeedToContinue,
-                    maxLifeSeconds: rc.maxLifeSeconds,
-                    bounceVfxPrefab: rc.bounceVfxPrefab,
-                    bounceSfx: rc.bounceSfx
-                );
-
-                // No Rigidbody path; ricochet script handles travel via raycasts
-                continue;
-            }
-
-            // --- Default projectile path (your existing behavior) ---
-            GameObject proj = Instantiate(currentWeapon.bulletPrefab, firePoint.position, spreadRotation);
-
-            if (proj.TryGetComponent<Rigidbody>(out var rb))
-            {
-                rb.isKinematic = false; // Ensure rigidbody is non-kinematic before setting velocity
-                rb.linearVelocity = dir * currentWeapon.bulletSpeed;
-            }
-
-            if (proj.TryGetComponent<IBullet>(out var ib))
-                ib.Initialize(gameObject);
-            else
-                Debug.LogWarning("[PlayerController] Bullet prefab missing IBullet component!", proj);
-        }
-    }
-
-    void TriggerShotEffects()
-    {
-        if (shootClip != null)
-        {
-            if (audioSource != null) audioSource.PlayOneShot(shootClip, shootVolume);
-            else AudioSource.PlayClipAtPoint(shootClip, firePoint.position, shootVolume);
-        }
-
-        if (muzzleFlash != null)
-        {
-            muzzleFlash.transform.position = firePoint.position;
-            muzzleFlash.transform.rotation = firePoint.rotation;
-            muzzleFlash.Play(true);
-        }
-        else if (muzzleFlashPrefab != null)
-        {
-            var fx = Instantiate(muzzleFlashPrefab, firePoint.position, firePoint.rotation, firePoint);
-            Destroy(fx, muzzleFlashLifetime);
-        }
-
-        if (muzzleFlashLight != null)
-        {
-            muzzleFlashLight.enabled = true;
-            flashTimer = flashDuration;
-        }
-    }
-
-    // ---------------- WEAPON MANAGEMENT ----------------
-    public void GiveWeapon()
-    {
-        if (startingWeapon != null)
-        {
-            EquipWeapon(startingWeapon);
-            DLog("[PlayerController] GiveWeapon() called without an argument; equipped startingWeapon.");
-        }
-        else
-        {
-            Debug.LogWarning("[PlayerController] GiveWeapon() called without an argument, but no startingWeapon is set.");
-        }
-    }
-
-    public void GiveWeapon(Weapon newWeapon)
-    {
-        EquipWeapon(newWeapon);
-        if (newWeapon != null) DLog($"[PlayerController] Player received: {newWeapon.weaponName}");
-    }
-
-    public void EquipWeapon(Weapon newWeapon)
-    {
-        currentWeapon = newWeapon;
-        if (newWeapon != null) DLog($"[PlayerController] Equipped: {newWeapon.weaponName}");
-    }
-
-    // ---------------- MOVEMENT (with Dash) ----------------
     void HandleMovement()
     {
-        int mask = (groundLayer.value == 0) ? Physics.DefaultRaycastLayers : groundLayer.value;
-        grounded = controller.isGrounded || SphereOrRayGround(mask, out _, out _);
+        if (Time.deltaTime <= 0f) return;
 
-        if (grounded) groundedTimer = groundedGrace;
-        else groundedTimer = Mathf.Max(0f, groundedTimer - Time.deltaTime);
+        int gMask = (groundLayer.value != 0) ? groundLayer.value : Physics.DefaultRaycastLayers;
 
-        if ((grounded || groundedTimer > 0f) && velocity.y < 0f)
-            velocity.y = -2f;
+        // ---------- Grounding (cheap first, probe when needed) ----------
+        bool ccGrounded = controller.isGrounded;
+        bool doProbe = (_groundProbeCountdown-- <= 0) || !ccGrounded;
 
-        // Read input first so we can use it for dash direction decisions.
-        Vector2 moveAxes = GetMoveInput();
-        Vector3 moveDir;
-
-        bool useWorldAxes = false;
-        if (forceWorldAxesWhenTopDown && mainCamera != null)
+        bool hitGround = false;
+        if (doProbe)
         {
-            float downDot = Vector3.Dot(mainCamera.transform.forward.normalized, Vector3.down);
-            if (downDot >= topDownDotThreshold) useWorldAxes = true;
+            _groundProbeCountdown = _groundProbeInterval;
+
+            hitGround = CapsuleGroundNonAlloc(gMask, out _lastGroundPoint, out _lastGroundNormal);
+            if (!hitGround)
+            {
+                // Thin ray fallback (still NonAlloc)
+                Ray ray = new Ray(transform.position + Vector3.up * 0.05f, Vector3.down);
+                int hitCount = Physics.RaycastNonAlloc(ray, _groundHits, groundCheckDistance + groundSnapExtra, gMask, QueryTriggerInteraction.Ignore);
+                if (hitCount > 0)
+                {
+                    _lastGroundPoint = _groundHits[0].point;
+                    _lastGroundNormal = _groundHits[0].normal;
+                    hitGround = true;
+                }
+            }
         }
 
-        if (useWorldAxes || mainCamera == null)
+        float yErrProbe = transform.position.y - _lastGroundPoint.y;
+        bool wasGroundedLastFrame = grounded;
+        grounded = ccGrounded || (hitGround && (yErrProbe <= groundCheckDistance));
+
+        if (grounded) groundedTimer = 0f; else groundedTimer += Time.deltaTime;
+        bool groundedThisFrame = (groundedTimer < groundedGrace);
+
+        float yErr = transform.position.y - _lastGroundPoint.y;
+        Vector3 gPoint = _lastGroundPoint;
+        Vector3 gNormal = _lastGroundNormal;
+        // ---------------------------------------------------------------
+
+        Vector2 mInput = GetMoveInput();
+        Vector3 mDir = Vector3.zero;
+        if (mInput.sqrMagnitude > 0.01f)
         {
-            moveDir = new Vector3(moveAxes.x, 0f, moveAxes.y);
+            bool topDown = false;
+            if (mainCamera != null)
+            {
+                float dot = Vector3.Dot(mainCamera.transform.forward, Vector3.down);
+                topDown = (dot >= topDownDotThreshold);
+            }
+
+            if (topDown && forceWorldAxesWhenTopDown)
+            {
+                mDir = new Vector3(mInput.x, 0f, mInput.y).normalized;
+            }
+            else
+            {
+                if (mainCamera != null)
+                {
+                    Vector3 f = mainCamera.transform.forward;
+                    Vector3 r = mainCamera.transform.right;
+                    f.y = 0f; r.y = 0f;
+                    f.Normalize(); r.Normalize();
+                    mDir = (f * mInput.y + r * mInput.x).normalized;
+                }
+                else
+                {
+                    mDir = new Vector3(mInput.x, 0f, mInput.y).normalized;
+                }
+            }
+        }
+
+        bool justLanded = (!wasGroundedLastFrame && groundedThisFrame);
+        bool tryUnstick = justLanded && (yErr > controller.stepOffset + 0.02f);
+        if (tryUnstick)
+        {
+            // Use Move to nudge upward instead of toggling controller.enabled
+            Vector3 unstickDelta = new Vector3(0f, (gPoint.y + unstickNudge) - transform.position.y, 0f);
+            controller.Move(unstickDelta);
+            DLog($"[PlayerController] Unstick on landing (Move): yErr={yErr:F3}");
+        }
+
+        if (isDashing)
+        {
+            if (Time.time >= dashEndTime)
+            {
+                isDashing = false;
+                DLog("[PlayerController] Dash complete.");
+            }
         }
         else
         {
-            Vector3 camF = Vector3.ProjectOnPlane(mainCamera.transform.forward, Vector3.up).normalized;
-            Vector3 camR = Vector3.ProjectOnPlane(mainCamera.transform.right, Vector3.up).normalized;
-            if (camF.sqrMagnitude < 1e-4f && camR.sqrMagnitude < 1e-4f)
+            if (dashEnabled && Time.time >= nextDashAllowedTime)
             {
-                camF = Vector3.forward;
-                camR = Vector3.right;
+                // Exception-free Dash input
+                bool tryDash = Input.GetKeyDown(dashKey);
+                if (!tryDash && dashButtonAvailable)
+                {
+                    tryDash = Input.GetButtonDown("Dash");
+                }
+
+                if (tryDash)
+                {
+                    float planarSpeed = planar.magnitude;
+                    bool moving = (planarSpeed >= minDashMoveSpeed);
+                    if (!requireMoveForDash || moving)
+                    {
+                        StartDash(mDir.sqrMagnitude > 0.001f ? mDir : planar.normalized, planarSpeed);
+                    }
+                    else
+                    {
+                        DLog("[PlayerController] Dash require move but not moving enough.");
+                    }
+                }
             }
-            moveDir = camR * moveAxes.x + camF * moveAxes.y;
         }
-        if (moveDir.sqrMagnitude > 1f) moveDir.Normalize();
 
-        // Dash input + state (now uses real movement)
-        HandleDashInput(moveDir);
-
-        // Desired planar velocity
         Vector3 desiredPlanar;
         if (isDashing)
         {
-            float tNorm = Mathf.InverseLerp(dashEndTime - dashDuration, dashEndTime, Time.time);
-            float mult = (dashSpeedCurve != null) ? dashSpeedCurve.Evaluate(Mathf.Clamp01(tNorm)) : 1f;
-            desiredPlanar = dashDir * (moveSpeed * dashSpeedMultiplier * Mathf.Max(0.01f, mult));
-
-            // Override smoothing while dashing for a snappy feel
-            planar = desiredPlanar;
+            float elapsed = Time.time - (dashEndTime - dashDuration);
+            float norm = Mathf.Clamp01(elapsed / Mathf.Max(0.001f, dashDuration));
+            float mult = (dashSpeedCurve != null) ? dashSpeedCurve.Evaluate(norm) : 1f;
+            desiredPlanar = dashDir * (moveSpeed * dashSpeedMultiplier * mult);
         }
         else
         {
-            desiredPlanar = moveDir * moveSpeed;
-
-            float dt = Time.deltaTime;
-            float control = grounded ? 1f : airControl;
-            if (desiredPlanar.sqrMagnitude > 0.0001f)
-                planar = Vector3.MoveTowards(planar, desiredPlanar, acceleration * control * dt);
-            else
-                planar = Vector3.MoveTowards(planar, Vector3.zero, deceleration * (grounded ? 1 : airControl) * dt);
+            desiredPlanar = mDir * moveSpeed;
         }
 
-        // Gravity & move
-        velocity.y += gravity * Time.deltaTime;
-        Vector3 finalVel = new Vector3(planar.x, velocity.y, planar.z);
-        CollisionFlags flags = controller.Move(finalVel * Time.deltaTime);
+        float dt = Time.deltaTime;
+        float accel = groundedThisFrame ? acceleration : (acceleration * airControl);
+        float decel = groundedThisFrame ? deceleration : (deceleration * airControl);
 
-        if ((flags & CollisionFlags.Below) != 0 && velocity.y < 0f)
-            velocity.y = -2f;
-
-        if ((flags & CollisionFlags.Sides) != 0 && planar.sqrMagnitude < 0.0001f)
+        if (desiredPlanar.sqrMagnitude > 0.01f)
         {
-            Vector3 nudge = new Vector3(transform.forward.x, 0f, transform.forward.z) * unstickNudge;
-            controller.Move(nudge);
+            planar = Vector3.MoveTowards(planar, desiredPlanar, accel * dt);
         }
+        else
+        {
+            planar = Vector3.MoveTowards(planar, Vector3.zero, decel * dt);
+        }
+
+        if (groundedThisFrame)
+        {
+            velocity.y = -1f;
+            float snapDist = groundSnapExtra;
+            if (yErr > 0.001f && yErr <= snapDist)
+            {
+                controller.Move(Vector3.down * (yErr + 0.001f));
+            }
+        }
+        else
+        {
+            velocity.y += gravity * dt;
+        }
+
+        Vector3 finalMove = planar * dt + new Vector3(0f, velocity.y * dt, 0f);
+        if (controller.enabled)
+            controller.Move(finalMove);
     }
 
-    void HandleDashInput(Vector3 currentMoveDir)
+    void StartDash(Vector3 direction, float planarSpeed)
     {
-        if (!dashEnabled) { isDashing = false; return; }
-
-        // End dash when time is up
-        if (isDashing && Time.time >= dashEndTime)
-        {
-            isDashing = false;
-        }
-
-        // Press detection (any of: InputManager "Dash", keyboard LeftShift, Xbox 'B' fallback)
-        bool dashPressed = SafeGetButtonDown("Dash") || Input.GetKeyDown(dashKey) || Input.GetKeyDown(KeyCode.JoystickButton1);
-        if (!dashPressed) return;
-
-        if (Time.time < nextDashAllowedTime || isDashing)
-            return;
-
-        // 1) Prefer current actual movement (planar velocity)
-        Vector3 planarNoY = new Vector3(planar.x, 0f, planar.z);
-        float planarSpeed = planarNoY.magnitude;
-
-        Vector3 chosenDir = Vector3.zero;
-
-        if (planarSpeed >= minDashMoveSpeed)
-        {
-            chosenDir = planarNoY / Mathf.Max(planarSpeed, 1e-6f);
-        }
-        else if (currentMoveDir.sqrMagnitude > 0.0001f)
-        {
-            // 2) Fall back to current input direction (pre-smoothing)
-            chosenDir = currentMoveDir.normalized;
-        }
+        if (direction.sqrMagnitude < 0.001f)
+            direction = transform.forward;
         else
-        {
-            // 3) If movement is required, bail out; otherwise fallback to facing
-            if (requireMoveForDash) return;
-            chosenDir = transform.forward;
-        }
+            direction.Normalize();
 
-        dashDir = chosenDir;
-
-        if (faceDashDirection && dashDir.sqrMagnitude > 1e-6f)
-            transform.rotation = Quaternion.LookRotation(dashDir, Vector3.up);
-
-        // Begin dash
+        dashDir = direction;
         isDashing = true;
         dashEndTime = Time.time + dashDuration;
-        nextDashAllowedTime = Time.time + dashCooldown;
+        nextDashAllowedTime = dashEndTime + dashCooldown;
 
-        // Optional i-frames
+        if (faceDashDirection)
+            transform.rotation = Quaternion.LookRotation(dashDir, Vector3.up);
+
         if (dashIFrames > 0f)
         {
             isInvulnerable = true;
             invulnEndTime = Time.time + dashIFrames;
         }
 
-        // Optional VFX/SFX
         if (dashClip != null)
         {
             if (audioSource != null) audioSource.PlayOneShot(dashClip, dashVolume);
@@ -536,18 +454,35 @@ public class PlayerController : MonoBehaviour
         DLog($"[PlayerController] DASH dir={dashDir} speedRef={planarSpeed:F2}");
     }
 
-    bool SphereOrRayGround(int mask, out Vector3 point, out Vector3 normal)
+    // -------- Ground probe helper (NonAlloc) --------
+    bool CapsuleGroundNonAlloc(int mask, out Vector3 point, out Vector3 normal)
     {
-        Vector3 origin = transform.position + Vector3.up * 0.05f;
+        // Match the CharacterController capsule
+        Vector3 worldCenter = transform.TransformPoint(controller.center);
+        float radius = Mathf.Max(0.0001f, controller.radius - 0.01f);
+        float halfHeight = Mathf.Max(radius, controller.height * 0.5f - radius);
+
+        Vector3 top = worldCenter + Vector3.up * halfHeight;
+        Vector3 bottom = worldCenter - Vector3.up * halfHeight;
+
+        // Cast a short distance downward
         float dist = groundCheckDistance + groundSnapExtra;
 
-        if (Physics.SphereCast(origin, groundCheckRadius, Vector3.down, out RaycastHit hit, dist, mask, QueryTriggerInteraction.Ignore))
-        { point = hit.point; normal = hit.normal; return true; }
+        int hits = Physics.CapsuleCastNonAlloc(
+            top, bottom, radius,
+            Vector3.down, _groundHits, dist,
+            mask, QueryTriggerInteraction.Ignore);
 
-        if (Physics.Raycast(origin, Vector3.down, out hit, dist, mask, QueryTriggerInteraction.Ignore))
-        { point = hit.point; normal = hit.normal; return true; }
+        if (hits > 0)
+        {
+            point = _groundHits[0].point;
+            normal = _groundHits[0].normal;
+            return true;
+        }
 
-        point = default; normal = Vector3.up; return false;
+        point = default;
+        normal = Vector3.up;
+        return false;
     }
 
     Vector2 GetMoveInput()
@@ -597,17 +532,15 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            // Just transitioned from active -> zero
             if (_stickWasActive && snapStickWhenZero)
             {
                 if (_lastStickDir.sqrMagnitude > 1e-6f)
-                    transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up); // SNAP
-                _stickSnapUntil = now + stickSnapHoldDuration; // hold briefly to avoid jitter/mouse steal
+                    transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up);
+                _stickSnapUntil = now + stickSnapHoldDuration;
             }
             _stickWasActive = false;
         }
 
-        // Decide control (mouse wins ties)
         if (now < _mousePriorityUntil)
         {
             AimAtMouse();
@@ -616,7 +549,6 @@ public class PlayerController : MonoBehaviour
 
         if (now < _stickSnapUntil)
         {
-            // During snap hold, keep last stick direction
             if (_lastStickDir.sqrMagnitude > 1e-6f)
                 transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up);
             return;
@@ -630,13 +562,11 @@ public class PlayerController : MonoBehaviour
             }
             else if (_lastStickDir.sqrMagnitude > 1e-6f)
             {
-                // Stick recently had priority but is idle�keep last look
                 transform.rotation = Quaternion.LookRotation(_lastStickDir, Vector3.up);
             }
             return;
         }
 
-        // Default fallback
         AimAtMouse();
     }
 
@@ -675,9 +605,9 @@ public class PlayerController : MonoBehaviour
         float oldHealth = currentHealth;
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
         float actualHealed = currentHealth - oldHealth;
-        
+
         Debug.Log($"[PlayerController] ★ PLAYER picked up HEALTH PICKUP: +{actualHealed:F1} HP (was {oldHealth:F1}, now {currentHealth:F1}/{maxHealth:F1})", this);
-        
+
         UpdateHealthBar();
     }
 

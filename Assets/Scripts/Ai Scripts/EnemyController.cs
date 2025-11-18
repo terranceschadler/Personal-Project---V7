@@ -42,6 +42,12 @@ public class EnemyController : MonoBehaviour
     public int minHealthDrops = 1;
     public int maxHealthDrops = 1;
 
+    [Header("Ammo Drop Settings")]
+    public GameObject ammoPrefab;
+    [Range(0f, 1f)] public float ammoDropChance = 0.3f;
+    public int minAmmoDrops = 1;
+    public int maxAmmoDrops = 2;
+
     [Header("Scoring & Rewards")]
     [Tooltip("Score awarded when this enemy dies.")]
     public int killScore = 10;
@@ -672,6 +678,21 @@ public class EnemyController : MonoBehaviour
         // 3) Local loot drops (okay if these fail—they no longer block stats)
         try { DropCoins(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropCoins threw: {ex}"); }
         try { DropHealth(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropHealth threw: {ex}"); }
+        try { DropAmmo(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropAmmo threw: {ex}"); }
+
+        // 3.25) NEW: Upgrade drops (integrated upgrade system)
+        try
+        {
+            EnemyUpgradeDropper upgradeDropper = GetComponent<EnemyUpgradeDropper>();
+            if (upgradeDropper != null)
+            {
+                upgradeDropper.OnEnemyDeath();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[EnemyController] EnemyUpgradeDropper.OnEnemyDeath threw: {ex}");
+        }
 
         // 3.5) Mini Boss special loot (if this is a mini boss)
         try
@@ -758,6 +779,33 @@ public class EnemyController : MonoBehaviour
             Rigidbody rb = pack.GetComponent<Rigidbody>();
             if (rb != null)
                 rb.AddForce(Vector3.up * 1f, ForceMode.Impulse);
+        }
+    }
+
+    private void DropAmmo()
+    {
+        if (ammoPrefab == null) return;
+        if (UnityEngine.Random.value > ammoDropChance) return;
+
+        int ammoCount = UnityEngine.Random.Range(minAmmoDrops, maxAmmoDrops + 1);
+        for (int i = 0; i < ammoCount; i++)
+        {
+            Vector3 dropPos = transform.position + new Vector3(
+                UnityEngine.Random.Range(-0.5f, 0.5f),
+                0.5f, // Spawn slightly above ground
+                UnityEngine.Random.Range(-0.5f, 0.5f)
+            );
+
+            // Try to find ground
+            if (Physics.Raycast(dropPos + Vector3.up * 2f, Vector3.down, out RaycastHit hit, 5f))
+            {
+                dropPos = hit.point + Vector3.up * 0.1f;
+            }
+
+            // Just spawn it - let AmmoPickup handle everything
+            GameObject ammo = Instantiate(ammoPrefab, dropPos, Quaternion.identity);
+            
+            // DO NOT ADD RIGIDBODY - AmmoPickup will handle it
         }
     }
 

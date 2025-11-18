@@ -49,7 +49,7 @@ public class ShopStation : MonoBehaviour
             {
                 if (GameManager.Instance.SpendCoins(weaponCost))
                 {
-                    player.GiveWeapon(); // You need to implement this in PlayerController
+                    //player.GiveWeapon(); // You need to implement this in PlayerController
                     Debug.Log("Bought a weapon!");
                 }
             }

@@ -68,6 +68,10 @@ public class MiniBoss : MonoBehaviour
     [Tooltip("Guaranteed material bonus (added to whatever your normal system does).")]
     public Vector2Int guaranteedMaterialBonusRange = new Vector2Int(10, 20);
 
+    [Header("Weapon Upgrades")]
+    [Tooltip("Chance to drop a rare weapon upgrade (0-1). Mini bosses drop better upgrades than regular enemies.")]
+    [Range(0f, 1f)] public float rareWeaponUpgradeChance = 0.6f;
+
     [Tooltip("Try to auto-subscribe to a death event on attached components (OnDeath/Died/onDeath). If not found, call NotifyKilled() from your death code.")]
     public bool autoHookDeathEvent = true;
 
@@ -93,6 +97,22 @@ public class MiniBoss : MonoBehaviour
     [Tooltip("Radius around mini boss to spawn fallback loot")]
     [Min(0f)] public float fallbackLootSpawnRadius = 2f;
 
+    [Header("Health Bar")]
+    [Tooltip("Health bar prefab to display above mini boss (uses same prefab as boss/player)")]
+    public GameObject healthBarPrefab;
+    [Tooltip("Local offset from mini boss pivot where the bar will appear")]
+    public Vector3 healthBarLocalOffset = new Vector3(0f, 2.5f, 0f);
+    [Tooltip("Show health bar only when taking damage")]
+    public bool showOnlyWhenDamaged = true;
+    [Tooltip("How long to keep health bar visible after last damage (seconds)")]
+    [Min(0f)] public float healthBarVisibleDuration = 3f;
+    [Tooltip("World width of the health bar canvas")]
+    [Min(0.02f)] public float barWorldWidth = 0.6f;
+    [Tooltip("World height of the health bar canvas")]
+    [Min(0.02f)] public float barWorldHeight = 0.08f;
+    [Tooltip("Always face camera (billboard effect)")]
+    public bool billboardHealthBar = true;
+
     [Header("Diagnostics")]
     public bool debugLogs = true;
 
@@ -106,6 +126,16 @@ public class MiniBoss : MonoBehaviour
     private ILootAdapter _loot;
     private bool _lootGrantedThisLifecycle = false; // safety against double drops
 
+    // Health bar internals
+    private Transform _hbTransform;
+    private UnityEngine.UI.Slider _hbSlider;
+    private UnityEngine.UI.Image _hbFilledImage;
+    private Canvas _hbCanvas;
+    private RectTransform _hbCanvasRT;
+    private Camera _mainCam;
+    private float _lastDamageTime = -999f;
+    private EnemyController _enemyController;
+
     void Awake()
     {
         _health = HealthAdapter.TryCreate(gameObject, debugLogs);
@@ -113,6 +143,21 @@ public class MiniBoss : MonoBehaviour
         if (!_aligner && autoAddAligner) _aligner = gameObject.AddComponent<MeshFeetAlignToAgentBase>();
 
         _loot = LootAdapter.TryCreate(gameObject, debugLogs);
+
+        // Get reference to EnemyController to hook into damage events
+        _enemyController = GetComponent<EnemyController>();
+        if (_enemyController == null && debugLogs)
+        {
+            Debug.LogWarning($"[MiniBoss] No EnemyController found on '{gameObject.name}' - health bar won't update on damage!");
+        }
+
+        // Auto-add health bar handler if health bar is configured
+        if (healthBarPrefab != null && GetComponent<MiniBossHealthBarHandler>() == null)
+        {
+            gameObject.AddComponent<MiniBossHealthBarHandler>();
+            if (debugLogs)
+                Debug.Log($"[MiniBoss] Auto-added MiniBossHealthBarHandler to '{gameObject.name}'");
+        }
 
         if (autoHookDeathEvent)
         {
@@ -131,7 +176,48 @@ public class MiniBoss : MonoBehaviour
     void OnEnable()
     {
         _lootGrantedThisLifecycle = false; // reset for pooled spawns
+        _lastDamageTime = -999f; // reset damage timer
+
+        if (_mainCam == null) _mainCam = Camera.main;
+
+        // Create health bar when mini boss spawns
+        EnsureHealthBarExists();
+        UpdateHealthBarValue();
+
         StartCoroutine(CoApplyAll());
+    }
+
+    void OnDisable()
+    {
+        SafeDestroyHealthBar();
+    }
+
+    void Update()
+    {
+        UpdateHealthBarVisibility();
+    }
+
+    void LateUpdate()
+    {
+        // Update health bar position and rotation
+        if (_hbTransform != null)
+        {
+            _hbTransform.localPosition = healthBarLocalOffset;
+
+            // Billboard effect - always face camera
+            if (billboardHealthBar)
+            {
+                if (_mainCam == null) _mainCam = Camera.main;
+                if (_mainCam != null)
+                {
+                    _hbTransform.rotation = Quaternion.LookRotation(-_mainCam.transform.forward, Vector3.up);
+                }
+            }
+
+            ApplyHealthBarScale();
+        }
+
+        UpdateHealthBarValue();
     }
 
     // ---------------- Back-compat for existing spawners ----------------
@@ -178,10 +264,14 @@ public class MiniBoss : MonoBehaviour
         float hp = linearHealth ? (baseHealth * _chosenScale)
                                 : Mathf.Max(1f, sizeToHealthCurve.Evaluate(_chosenScale));
         if (maxHealthCap > 0f) hp = Mathf.Min(hp, maxHealthCap);
+
+        // Mini bosses have 5x the calculated health
+        hp *= 5f;
+
         _targetMax = Mathf.Max(1f, hp);
 
         if (debugLogs)
-            Debug.Log($"[MiniBoss] Computed scale={_chosenScale:0.00} targetMaxHP={_targetMax:0}");
+            Debug.Log($"[MiniBoss] Computed scale={_chosenScale:0.00} targetMaxHP={_targetMax:0} (5x multiplier applied)");
     }
 
     private void ApplyScale()
@@ -231,8 +321,8 @@ public class MiniBoss : MonoBehaviour
     /// </summary>
     public void NotifyKilled()
     {
-        // ALWAYS log when this is called, regardless of debugLogs setting
-        Debug.Log($"[MiniBoss] ★★★ NotifyKilled() CALLED on '{gameObject.name}' ★★★", gameObject);
+        if (debugLogs)
+            Debug.Log($"[MiniBoss] ★★★ NotifyKilled() CALLED on '{gameObject.name}' ★★★", gameObject);
         TryGrantMiniBossLoot();
     }
 
@@ -243,7 +333,8 @@ public class MiniBoss : MonoBehaviour
     [ContextMenu("TEST: Force Loot Drop Now")]
     public void TestForceLootDrop()
     {
-        Debug.Log($"[MiniBoss] ===== TESTING LOOT DROP =====", gameObject);
+        if (debugLogs)
+            Debug.Log($"[MiniBoss] ===== TESTING LOOT DROP =====", gameObject);
         _lootGrantedThisLifecycle = false; // Reset so it can drop again
         NotifyKilled();
     }
@@ -335,10 +426,13 @@ public class MiniBoss : MonoBehaviour
         {
             SpawnGuaranteedCoins();
             SpawnAdditionalLoot();
-            
+
             if (debugLogs)
                 Debug.Log($"[MiniBoss] Spawned guaranteed physical loot drops (coins + health/items).");
         }
+
+        // Try to spawn rare weapon upgrade
+        SpawnRareWeaponUpgrade();
 
         // Only show error if BOTH the loot system AND fallback are disabled/missing
         if (!lootSystemWorked && !useFallbackLoot)
@@ -354,11 +448,37 @@ public class MiniBoss : MonoBehaviour
         }
     }
 
+    private void SpawnRareWeaponUpgrade()
+    {
+        if (UnityEngine.Random.value > rareWeaponUpgradeChance)
+        {
+            if (debugLogs)
+                Debug.Log($"[MiniBoss] Weapon upgrade roll failed ({UnityEngine.Random.value:F2} > {rareWeaponUpgradeChance:F2})");
+            return;
+        }
+
+        var gm = GameManager.Instance;
+        if (gm == null)
+        {
+            Debug.LogWarning("[MiniBoss] GameManager not found - cannot spawn rare weapon upgrade!");
+            return;
+        }
+
+        Vector3 spawnPos = transform.position + new Vector3(0f, 1.5f, 0f);
+        bool spawned = gm.SpawnRareWeaponUpgrade(spawnPos);
+
+        if (spawned && debugLogs)
+        {
+            Debug.Log($"[MiniBoss] <color=#4A9EFF>★ Spawned RARE weapon upgrade at {spawnPos} ★</color>");
+        }
+    }
+
     private void SpawnGuaranteedCoins()
     {
         if (coinPrefab == null)
         {
-            Debug.LogWarning($"[MiniBoss] coinPrefab not assigned on '{gameObject.name}'! Mini bosses should always drop coins.");
+            if (debugLogs)
+                Debug.LogWarning($"[MiniBoss] coinPrefab not assigned on '{gameObject.name}'! Mini bosses should always drop coins.");
             return;
         }
 
@@ -379,7 +499,8 @@ public class MiniBoss : MonoBehaviour
             
             if (coin == null)
             {
-                Debug.LogError($"[MiniBoss] Failed to instantiate coinPrefab! Check that the prefab is valid.");
+                if (debugLogs)
+                    Debug.LogError($"[MiniBoss] Failed to instantiate coinPrefab! Check that the prefab is valid.");
                 continue;
             }
             
@@ -395,16 +516,18 @@ public class MiniBoss : MonoBehaviour
             }
         }
 
-        Debug.Log($"[MiniBoss] ✓ Successfully spawned {coinCount} physical coin pickups!");
+        if (debugLogs)
+            Debug.Log($"[MiniBoss] ✓ Successfully spawned {coinCount} physical coin pickups!");
     }
 
     private void SpawnAdditionalLoot()
     {
         if (additionalLootPrefabs == null || additionalLootPrefabs.Length == 0)
         {
-            Debug.LogWarning($"[MiniBoss] No additionalLootPrefabs assigned on '{gameObject.name}'! " +
-                           "Mini bosses should drop health pickups. " +
-                           "Assign health pickup prefabs in the 'Fallback Loot' section.", gameObject);
+            if (debugLogs)
+                Debug.LogWarning($"[MiniBoss] No additionalLootPrefabs assigned on '{gameObject.name}'! " +
+                               "Mini bosses should drop health pickups. " +
+                               "Assign health pickup prefabs in the 'Fallback Loot' section.", gameObject);
             return;
         }
 
@@ -421,7 +544,8 @@ public class MiniBoss : MonoBehaviour
             tracker = new GameObject("MiniBossLootTracker");
             tracker.AddComponent<MiniBossLootTracker>();
             DontDestroyOnLoad(tracker);
-            Debug.Log("[MiniBoss] Created persistent MiniBossLootTracker object");
+            if (debugLogs)
+                Debug.Log("[MiniBoss] Created persistent MiniBossLootTracker object");
         }
         var trackerScript = tracker.GetComponent<MiniBossLootTracker>();
 
@@ -431,7 +555,8 @@ public class MiniBoss : MonoBehaviour
             GameObject prefab = additionalLootPrefabs[UnityEngine.Random.Range(0, additionalLootPrefabs.Length)];
             if (prefab == null)
             {
-                Debug.LogWarning($"[MiniBoss] additionalLootPrefabs[{i}] is null! Skipping...");
+                if (debugLogs)
+                    Debug.LogWarning($"[MiniBoss] additionalLootPrefabs[{i}] is null! Skipping...");
                 continue;
             }
 
@@ -444,7 +569,8 @@ public class MiniBoss : MonoBehaviour
             
             if (item == null)
             {
-                Debug.LogError($"[MiniBoss] Failed to instantiate {prefab.name}! Check that the prefab is valid.");
+                if (debugLogs)
+                    Debug.LogError($"[MiniBoss] Failed to instantiate {prefab.name}! Check that the prefab is valid.");
                 continue;
             }
             
@@ -460,7 +586,8 @@ public class MiniBoss : MonoBehaviour
                     {
                         // Disable short lifetime timers (mini boss loot should persist)
                         lifetimeField.SetValue(pickupBase, 0f);
-                        Debug.Log($"[MiniBoss] Disabled lifetime timer on health pickup (was {currentLifetime}s, now 0s - will persist)");
+                        if (debugLogs)
+                            Debug.Log($"[MiniBoss] Disabled lifetime timer on health pickup (was {currentLifetime}s, now 0s - will persist)");
                     }
                 }
                 
@@ -472,35 +599,45 @@ public class MiniBoss : MonoBehaviour
                     if (currentSnap)
                     {
                         snapField.SetValue(pickupBase, false);
-                        Debug.Log($"[MiniBoss] Disabled snapToGroundOnEnable on health pickup (was causing instant destruction)");
+                        if (debugLogs)
+                            Debug.Log($"[MiniBoss] Disabled snapToGroundOnEnable on health pickup (was causing instant destruction)");
                     }
                 }
             }
             
             itemsSpawned++;
             
-            // ALWAYS log health pickup spawns for debugging
-            Debug.Log($"[MiniBoss] ✓ Spawned HEALTH PICKUP #{itemsSpawned}: '{item.name}' at position {spawnPos}", item);
-            Debug.Log($"[MiniBoss] Health pickup active: {item.activeInHierarchy}, instance ID: {item.GetInstanceID()}");
+            if (debugLogs)
+            {
+                // ALWAYS log health pickup spawns for debugging
+                Debug.Log($"[MiniBoss] ✓ Spawned HEALTH PICKUP #{itemsSpawned}: '{item.name}' at position {spawnPos}", item);
+                Debug.Log($"[MiniBoss] Health pickup active: {item.activeInHierarchy}, instance ID: {item.GetInstanceID()}");
+            }
             
             // Check for common components
             Collider col = item.GetComponent<Collider>();
-            if (col == null)
+            if (debugLogs)
             {
-                Debug.LogError($"[MiniBoss] ⚠️ Health pickup '{item.name}' has NO COLLIDER - player can't pick it up!", item);
-            }
-            else
-            {
-                Debug.Log($"[MiniBoss] Health pickup has collider: {col.GetType().Name}, isTrigger={col.isTrigger}");
+                if (col == null)
+                {
+                    Debug.LogError($"[MiniBoss] ⚠️ Health pickup '{item.name}' has NO COLLIDER - player can't pick it up!", item);
+                }
+                else
+                {
+                    Debug.Log($"[MiniBoss] Health pickup has collider: {col.GetType().Name}, isTrigger={col.isTrigger}");
+                }
             }
             
             // Draw a debug sphere in the Scene view to show spawn location
-            Debug.DrawRay(spawnPos, Vector3.up * 5f, Color.green, 10f);
-            Debug.DrawRay(spawnPos, Vector3.down * 5f, Color.green, 10f);
-            
-            // Check all components on the health pickup
-            var components = item.GetComponents<Component>();
-            Debug.Log($"[MiniBoss] Health pickup has {components.Length} components: {string.Join(", ", System.Array.ConvertAll(components, c => c.GetType().Name))}");
+            if (debugLogs)
+            {
+                Debug.DrawRay(spawnPos, Vector3.up * 5f, Color.green, 10f);
+                Debug.DrawRay(spawnPos, Vector3.down * 5f, Color.green, 10f);
+                
+                // Check all components on the health pickup
+                var components = item.GetComponents<Component>();
+                Debug.Log($"[MiniBoss] Health pickup has {components.Length} components: {string.Join(", ", System.Array.ConvertAll(components, c => c.GetType().Name))}");
+            }
             
             // Optional: Add upward force if item has rigidbody - DELAYED to prevent instant destruction
             Rigidbody rb = item.GetComponent<Rigidbody>();
@@ -514,30 +651,35 @@ public class MiniBoss : MonoBehaviour
                 // Use the persistent tracker to apply delayed physics
                 if (trackerScript != null)
                 {
-                    trackerScript.StartCoroutine(trackerScript.ApplyDelayedPhysics(rb, randomForce));
+                    trackerScript.StartCoroutine(trackerScript.ApplyDelayedPhysics(rb, randomForce, debugLogs));
                 }
                 
-                Debug.Log($"[MiniBoss] Health pickup has Rigidbody - will apply delayed physics via persistent tracker");
+                if (debugLogs)
+                    Debug.Log($"[MiniBoss] Health pickup has Rigidbody - will apply delayed physics via persistent tracker");
             }
             else
             {
-                Debug.LogWarning($"[MiniBoss] Health pickup '{item.name}' has no Rigidbody - it won't fall naturally!", item);
+                if (debugLogs)
+                    Debug.LogWarning($"[MiniBoss] Health pickup '{item.name}' has no Rigidbody - it won't fall naturally!", item);
             }
             
             // Check if it's still alive after frames - use persistent tracker
             if (trackerScript != null)
             {
-                trackerScript.StartCoroutine(trackerScript.CheckHealthPickupExists(item, spawnPos));
+                trackerScript.StartCoroutine(trackerScript.CheckHealthPickupExists(item, spawnPos, debugLogs));
             }
         }
 
-        if (itemsSpawned > 0)
+        if (debugLogs)
         {
-            Debug.Log($"[MiniBoss] ✓ Successfully spawned {itemsSpawned} physical health/item pickups!");
-        }
-        else
-        {
-            Debug.LogWarning($"[MiniBoss] Failed to spawn any health/item pickups! Check that prefabs are valid.");
+            if (itemsSpawned > 0)
+            {
+                Debug.Log($"[MiniBoss] ✓ Successfully spawned {itemsSpawned} physical health/item pickups!");
+            }
+            else
+            {
+                Debug.LogWarning($"[MiniBoss] Failed to spawn any health/item pickups! Check that prefabs are valid.");
+            }
         }
     }
     // Try to auto-subscribe to a likely death event on attached scripts
@@ -545,7 +687,7 @@ public class MiniBoss : MonoBehaviour
     {
         try
         {
-            // Common death event names we�ll probe for (UnityEvent or C# event or Action)
+            // Common death event names we�ll probe for (UnityEvent or C# event or Action)
             string[] deathNames = { "OnDeath", "onDeath", "Died", "OnDied", "Death", "Killed", "OnKilled" };
 
             foreach (var c in GetComponents<Component>())
@@ -638,8 +780,189 @@ public class MiniBoss : MonoBehaviour
     // Invoked by auto-hook or can be called from other scripts if needed
     private void OnDeathDetected()
     {
-        Debug.Log($"[MiniBoss] OnDeathDetected() triggered on '{gameObject.name}' - calling NotifyKilled()", gameObject);
+        if (debugLogs)
+            Debug.Log($"[MiniBoss] OnDeathDetected() triggered on '{gameObject.name}' - calling NotifyKilled()", gameObject);
         NotifyKilled();
+    }
+
+    // ---------- Health Bar System ----------
+
+    /// <summary>
+    /// Call this when mini boss takes damage to show health bar
+    /// </summary>
+    public void OnMiniBossDamaged()
+    {
+        _lastDamageTime = Time.time;
+
+        // Make health bar visible when taking damage
+        if (_hbTransform != null && showOnlyWhenDamaged)
+        {
+            _hbTransform.gameObject.SetActive(true);
+        }
+
+        UpdateHealthBarValue();
+    }
+
+    private void EnsureHealthBarExists()
+    {
+        if (_hbTransform != null) return;
+
+        if (healthBarPrefab == null)
+        {
+            if (debugLogs)
+                Debug.LogWarning($"[MiniBoss] healthBarPrefab is NULL on '{name}' - no health bar will spawn.");
+            return;
+        }
+
+        GameObject hb = Instantiate(healthBarPrefab);
+        hb.name = $"{name}_MiniBossHealthBar";
+        hb.transform.SetParent(transform, worldPositionStays: false);
+        hb.transform.localPosition = healthBarLocalOffset;
+        hb.transform.localRotation = Quaternion.identity;
+
+        // Normalize scales to prevent gigantic bars
+        NormalizeLocalScalesRecursive(hb.transform);
+
+        // Force Canvas to World Space and set real world size
+        _hbCanvas = hb.GetComponentInChildren<Canvas>(true);
+        if (_hbCanvas != null)
+        {
+            _hbCanvas.renderMode = RenderMode.WorldSpace;
+            _hbCanvasRT = _hbCanvas.GetComponent<RectTransform>();
+            if (_hbCanvasRT != null)
+            {
+                _hbCanvasRT.sizeDelta = new Vector2(barWorldWidth, barWorldHeight);
+            }
+        }
+
+        // Keep on same layer as mini boss
+        hb.layer = gameObject.layer;
+
+        _hbTransform = hb.transform;
+        _hbSlider = hb.GetComponentInChildren<UnityEngine.UI.Slider>(true);
+        _hbFilledImage = FindFirstFilledImage(hb);
+
+        // Initially hide if configured to show only when damaged
+        if (showOnlyWhenDamaged)
+        {
+            hb.SetActive(false);
+        }
+
+        UpdateHealthBarValue();
+        ApplyHealthBarScale();
+
+        if (_hbSlider == null && _hbFilledImage == null && debugLogs)
+            Debug.LogWarning($"[MiniBoss] Health bar prefab has neither Slider nor Filled Image.", hb);
+
+        if (debugLogs)
+            Debug.Log($"[MiniBoss] Health bar created for '{name}'");
+    }
+
+    private static void NormalizeLocalScalesRecursive(Transform root)
+    {
+        root.localScale = Vector3.one;
+        for (int i = 0; i < root.childCount; i++)
+            NormalizeLocalScalesRecursive(root.GetChild(i));
+    }
+
+    private UnityEngine.UI.Image FindFirstFilledImage(GameObject root)
+    {
+        var imgs = root.GetComponentsInChildren<UnityEngine.UI.Image>(true);
+        for (int i = 0; i < imgs.Length; i++)
+        {
+            if (imgs[i] != null && imgs[i].type == UnityEngine.UI.Image.Type.Filled)
+                return imgs[i];
+        }
+        return null;
+    }
+
+    private void UpdateHealthBarValue()
+    {
+        if (_hbSlider == null && _hbFilledImage == null) return;
+
+        float maxHp = Mathf.Max(1f, GetMaxHealth());
+        float hp = Mathf.Clamp(GetCurrentHealth(), 0f, maxHp);
+        float ratio = hp / maxHp;
+
+        if (_hbSlider != null)
+        {
+            if (!Mathf.Approximately(_hbSlider.maxValue, maxHp)) _hbSlider.maxValue = maxHp;
+            if (!Mathf.Approximately(_hbSlider.value, hp)) _hbSlider.value = hp;
+        }
+
+        if (_hbFilledImage != null)
+        {
+            if (!Mathf.Approximately(_hbFilledImage.fillAmount, ratio))
+                _hbFilledImage.fillAmount = ratio;
+        }
+    }
+
+    private void UpdateHealthBarVisibility()
+    {
+        if (!showOnlyWhenDamaged || _hbTransform == null) return;
+
+        // Hide health bar after duration expires
+        float timeSinceLastDamage = Time.time - _lastDamageTime;
+        if (timeSinceLastDamage > healthBarVisibleDuration && _hbTransform.gameObject.activeSelf)
+        {
+            _hbTransform.gameObject.SetActive(false);
+        }
+    }
+
+    private void ApplyHealthBarScale()
+    {
+        if (_hbTransform == null) return;
+
+        // Cancel parent (mini boss) scale so bar remains constant size
+        Vector3 parent = transform.lossyScale;
+        Vector3 invParent = new Vector3(
+            parent.x != 0 ? 1f / parent.x : 1f,
+            parent.y != 0 ? 1f / parent.y : 1f,
+            parent.z != 0 ? 1f / parent.z : 1f
+        );
+
+        // Safe clamps
+        float minS = 0.0001f, maxS = 10f;
+        invParent.x = Mathf.Clamp(invParent.x, minS, maxS);
+        invParent.y = Mathf.Clamp(invParent.y, minS, maxS);
+        invParent.z = Mathf.Clamp(invParent.z, minS, maxS);
+
+        _hbTransform.localScale = invParent;
+    }
+
+    private void SafeDestroyHealthBar()
+    {
+        if (_hbTransform != null)
+        {
+            Destroy(_hbTransform.gameObject);
+            _hbTransform = null;
+            _hbSlider = null;
+            _hbFilledImage = null;
+            _hbCanvas = null;
+            _hbCanvasRT = null;
+        }
+    }
+
+    private float GetMaxHealth()
+    {
+        if (_enemyController != null)
+            return _enemyController.maxHealth;
+        return _targetMax;
+    }
+
+    private float GetCurrentHealth()
+    {
+        // Use reflection to get current health from EnemyController
+        if (_enemyController != null)
+        {
+            var field = typeof(EnemyController).GetField("currentHealth",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Public);
+            if (field != null)
+                return (float)field.GetValue(_enemyController);
+        }
+        return 0f;
     }
 
     // ----------------- Health Adapter -----------------
@@ -1124,7 +1447,7 @@ public class MiniBoss : MonoBehaviour
 // Persistent tracker for health pickups that survives mini boss destruction
 public class MiniBossLootTracker : MonoBehaviour
 {
-    public System.Collections.IEnumerator ApplyDelayedPhysics(Rigidbody rb, Vector3 force)
+    public System.Collections.IEnumerator ApplyDelayedPhysics(Rigidbody rb, Vector3 force, bool debugLogs)
     {
         if (rb == null) yield break;
         
@@ -1137,19 +1460,22 @@ public class MiniBossLootTracker : MonoBehaviour
         {
             rb.useGravity = true;
             rb.AddForce(force, ForceMode.Impulse);
-            Debug.Log($"[MiniBossTracker] Applied delayed physics to {rb.gameObject.name}");
+            if (debugLogs)
+                Debug.Log($"[MiniBossTracker] Applied delayed physics to {rb.gameObject.name}");
         }
     }
     
-    public System.Collections.IEnumerator CheckHealthPickupExists(GameObject item, Vector3 spawnPos)
+    public System.Collections.IEnumerator CheckHealthPickupExists(GameObject item, Vector3 spawnPos, bool debugLogs)
     {
         if (item == null)
         {
-            Debug.LogError($"[MiniBossTracker] ⚠️ Health pickup was NULL immediately after spawn! Position: {spawnPos}");
+            if (debugLogs)
+                Debug.LogError($"[MiniBossTracker] ⚠️ Health pickup was NULL immediately after spawn! Position: {spawnPos}");
             yield break;
         }
         
-        Debug.Log($"[MiniBossTracker] CheckHealthPickupExists coroutine STARTED for {item.name}", item);
+        if (debugLogs)
+            Debug.Log($"[MiniBossTracker] CheckHealthPickupExists coroutine STARTED for {item.name}", item);
         
         int frame = 0;
         while (frame < 180) // Check for 3 seconds (180 frames at 60fps)
@@ -1159,47 +1485,52 @@ public class MiniBossLootTracker : MonoBehaviour
             
             if (item == null)
             {
-                Debug.LogError($"[MiniBossTracker] ⚠️⚠️⚠️ HEALTH PICKUP DESTROYED at frame {frame}! " +
-                             $"Original spawn position: {spawnPos}. " +
-                             $"Something is destroying health pickups after {frame} frames!");
+                if (debugLogs)
+                    Debug.LogError($"[MiniBossTracker] ⚠️⚠️⚠️ HEALTH PICKUP DESTROYED at frame {frame}! " +
+                                 $"Original spawn position: {spawnPos}. " +
+                                 $"Something is destroying health pickups after {frame} frames!");
                 yield break;
             }
             
             if (!item.activeInHierarchy)
             {
-                Debug.LogError($"[MiniBossTracker] ⚠️⚠️⚠️ HEALTH PICKUP DEACTIVATED at frame {frame}! " +
-                             $"Position: {item.transform.position}. " +
-                             $"It exists but was set inactive!");
+                if (debugLogs)
+                    Debug.LogError($"[MiniBossTracker] ⚠️⚠️⚠️ HEALTH PICKUP DEACTIVATED at frame {frame}! " +
+                                 $"Position: {item.transform.position}. " +
+                                 $"It exists but was set inactive!");
                 yield break;
             }
             
-            if (frame == 1)
+            if (debugLogs)
             {
-                Debug.Log($"[MiniBossTracker] ✓ Frame 1: Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
-            }
-            else if (frame == 3)
-            {
-                Debug.Log($"[MiniBossTracker] ✓ Frame 3: Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
-            }
-            else if (frame == 10)
-            {
-                Debug.Log($"[MiniBossTracker] ✓ Frame 10: Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
-            }
-            else if (frame == 30)
-            {
-                Debug.Log($"[MiniBossTracker] ✓ Frame 30 (0.5s): Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
-            }
-            else if (frame == 60)
-            {
-                Debug.Log($"[MiniBossTracker] ✓ Frame 60 (1s): Health pickup still exists and visible! {item.name} at {item.transform.position}", item);
-            }
-            else if (frame == 120)
-            {
-                Debug.Log($"[MiniBossTracker] ✓ Frame 120 (2s): Health pickup still exists! {item.name} at {item.transform.position}", item);
+                if (frame == 1)
+                {
+                    Debug.Log($"[MiniBossTracker] ✓ Frame 1: Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
+                }
+                else if (frame == 3)
+                {
+                    Debug.Log($"[MiniBossTracker] ✓ Frame 3: Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
+                }
+                else if (frame == 10)
+                {
+                    Debug.Log($"[MiniBossTracker] ✓ Frame 10: Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
+                }
+                else if (frame == 30)
+                {
+                    Debug.Log($"[MiniBossTracker] ✓ Frame 30 (0.5s): Health pickup still exists: {item.name} at {item.transform.position}, active={item.activeInHierarchy}", item);
+                }
+                else if (frame == 60)
+                {
+                    Debug.Log($"[MiniBossTracker] ✓ Frame 60 (1s): Health pickup still exists and visible! {item.name} at {item.transform.position}", item);
+                }
+                else if (frame == 120)
+                {
+                    Debug.Log($"[MiniBossTracker] ✓ Frame 120 (2s): Health pickup still exists! {item.name} at {item.transform.position}", item);
+                }
             }
         }
         
-        if (item != null)
+        if (item != null && debugLogs)
         {
             Debug.Log($"[MiniBossTracker] ✓✓✓ SUCCESS! Health pickup survived 3 FULL SECONDS! {item.name} at {item.transform.position}", item);
             

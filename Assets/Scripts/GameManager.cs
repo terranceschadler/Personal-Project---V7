@@ -65,6 +65,15 @@ public class GameManager : MonoBehaviour
     [Range(0f, 1f)] public float maxHealthPickupDropChance = 0.35f;
     public Vector3 maxHealthPickupOffset = new Vector3(-0.75f, 0f, -0.75f);
 
+    // Weapon Upgrade pickups (tiered by quality)
+    [Header("Boss Weapon Upgrade Pickups")]
+    [Tooltip("Epic quality upgrade prefab - drops from full bosses (highest tier).")]
+    public GameObject epicWeaponUpgradePrefab;
+    [Tooltip("Rare quality upgrade prefab - for mini bosses (middle tier).")]
+    public GameObject rareWeaponUpgradePrefab;
+    [Range(0f, 1f)] public float weaponUpgradeDropChance = 0.7f;
+    public Vector3 weaponUpgradeOffset = new Vector3(0f, 0f, -0.75f);
+
     // ---------- Helicopter Parts ----------
     [Header("Helicopter Parts Drops")]
     public GameObject helicopterPartPrefab;    // fallback
@@ -82,6 +91,10 @@ public class GameManager : MonoBehaviour
     /// <summary>Raised when the (collected, required) parts numbers change.</summary>
     public event Action<int, int> OnHelicopterProgressChanged;
     public event Action<string> OnHelicopterPartCollected;
+
+    [Header("Weapon Reset")]
+    [Tooltip("Automatically reset player weapons when level restarts")]
+    public bool resetWeaponsOnLevelRestart = true;
 
     // =========================
     // BOSS HEALTH SCALING
@@ -110,21 +123,32 @@ public class GameManager : MonoBehaviour
         if (order1Based == 1 && forceFirstBossHealthEachRun && firstBossHealth > 0f)
             baseH = firstBossHealth;
 
+        float finalHealth;
         switch (bossHealthScalingMode)
         {
             case BossHealthScalingMode.Additive:
-                return Mathf.Max(1f, baseH + bossHealthAddPerBoss * (n - 1));
+                finalHealth = Mathf.Max(1f, baseH + bossHealthAddPerBoss * (n - 1));
+                break;
             case BossHealthScalingMode.Multiplicative:
                 float mul = Mathf.Max(0.01f, bossHealthMulPerBoss);
                 float factor = Mathf.Pow(mul, n - 1);
                 if (bossHealthMaxMultiplierClamp > 0f) factor = Mathf.Min(factor, bossHealthMaxMultiplierClamp);
-                return Mathf.Max(1f, baseH * factor);
+                finalHealth = Mathf.Max(1f, baseH * factor);
+                break;
             case BossHealthScalingMode.Curve:
                 float y = bossHealthCurve.Evaluate(n - 1);
                 if (y <= 0f) y = 0.01f;
-                return Mathf.Max(1f, baseH * y);
+                finalHealth = Mathf.Max(1f, baseH * y);
+                break;
+            default:
+                finalHealth = Mathf.Max(1f, baseH);
+                break;
         }
-        return Mathf.Max(1f, baseH);
+
+        // Full bosses have 20x the calculated health
+        finalHealth *= 20f;
+
+        return finalHealth;
     }
 
     public float GetNextBossHealth(float templateMaxHealth)
@@ -531,9 +555,61 @@ public class GameManager : MonoBehaviour
         try { if (WinUIController.Instance != null) WinUIController.Instance.Resume(); } catch { }
         HardResumeGameplay();
 
+        // Clean up scene before reload
+        StartCoroutine(RestartLevelCoroutine());
+    }
+
+    private IEnumerator RestartLevelCoroutine()
+    {
+        DLog("[GameManager] Starting level restart...");
+        
+        // Clean up any lingering objects
+        CleanupSceneObjects();
+        
+        // Wait a frame for cleanup
+        yield return null;
+
         var scene = SceneManager.GetActiveScene();
         DLog("[GameManager] Restarting '" + scene.name + "' (#" + scene.buildIndex + ").");
         SceneManager.LoadScene(scene.buildIndex);
+    }
+
+    private void CleanupSceneObjects()
+    {
+        DLog("[GameManager] Cleaning up scene objects...");
+        
+        // Clean up any upgrade pickups
+        try
+        {
+            GameObject[] pickups = GameObject.FindGameObjectsWithTag("Pickup");
+            foreach (GameObject pickup in pickups)
+            {
+                if (pickup != null) Destroy(pickup);
+            }
+        }
+        catch { }
+        
+        // Clean up any lingering enemies
+        try
+        {
+            GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+            foreach (GameObject enemy in enemies)
+            {
+                if (enemy != null) Destroy(enemy);
+            }
+        }
+        catch { }
+        
+        // Clean up any bullets
+        try
+        {
+            GameObject[] bullets = GameObject.FindGameObjectsWithTag("Bullet");
+            foreach (GameObject bullet in bullets)
+            {
+                if (bullet != null) Destroy(bullet);
+            }
+        }
+        catch { }
     }
     public void ConfirmQuitFromUI() { QuitGame(); }
     public void QuitGame()
@@ -627,7 +703,36 @@ public class GameManager : MonoBehaviour
 
         ValidateHelicopterDropConfig();
         FireHelicopterProgressChanged();
+        ResetPlayerWeapons();
         // Intentionally NOT starting a wave here; caller decides (e.g., after scene load).
+    }
+
+    private void ResetPlayerWeapons()
+    {
+        if (!resetWeaponsOnLevelRestart) return;
+
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+        if (playerObject == null)
+        {
+            PlayerWeaponController pwc = FindObjectOfType<PlayerWeaponController>();
+            if (pwc != null) playerObject = pwc.gameObject;
+        }
+
+        if (playerObject == null)
+        {
+            if (debugLogs) Debug.LogWarning("[GameManager] Cannot reset weapons - player not found");
+            return;
+        }
+
+        WeaponResetSystem resetSystem = playerObject.GetComponent<WeaponResetSystem>();
+        if (resetSystem == null)
+        {
+            resetSystem = playerObject.AddComponent<WeaponResetSystem>();
+            if (debugLogs) Debug.Log("[GameManager] Added WeaponResetSystem to player");
+        }
+
+        resetSystem.ResetWeapon();
+        DLog("[GameManager] Player weapons reset complete");
     }
 
     private int GetKillsRequiredForWave(int waveIndex) { return Mathf.Max(1, baseKillsPerWave + killsPerWaveGrowth * (waveIndex - 1)); }
@@ -761,7 +866,8 @@ public class GameManager : MonoBehaviour
         AddScore(bossKillScoreReward);
 
         DLog("[GameManager] Boss kill #" + bossKillCount + " at " + dropPosition + ". weaponChance=" + weaponDropChance.ToString("0.##") +
-             " partChance=" + helicopterPartDropChance.ToString("0.##") + " maxHPchance=" + maxHealthPickupDropChance.ToString("0.##"));
+             " partChance=" + helicopterPartDropChance.ToString("0.##") + " maxHPchance=" + maxHealthPickupDropChance.ToString("0.##") +
+             " upgradeChance=" + weaponUpgradeDropChance.ToString("0.##"));
 
         if (UnityEngine.Random.value <= weaponDropChance)
         {
@@ -777,6 +883,10 @@ public class GameManager : MonoBehaviour
         {
             UnityEngine.Object.Instantiate(maxHealthPickupPrefab, dropPosition + maxHealthPickupOffset, Quaternion.identity);
         }
+        if (epicWeaponUpgradePrefab != null && UnityEngine.Random.value <= weaponUpgradeDropChance)
+        {
+            UnityEngine.Object.Instantiate(epicWeaponUpgradePrefab, dropPosition + weaponUpgradeOffset, Quaternion.identity);
+        }
     }
 
     public bool SpawnNextHelicopterPart(Vector3 position)
@@ -784,6 +894,22 @@ public class GameManager : MonoBehaviour
         var part = GetNextHelicopterPartPrefab();
         if (part == null) { Debug.LogWarning("[GameManager] No part available."); return false; }
         UnityEngine.Object.Instantiate(part, position, Quaternion.identity);
+        return true;
+    }
+
+    /// <summary>
+    /// Spawns a rare weapon upgrade at the given position (for mini bosses).
+    /// Returns true if upgrade was spawned.
+    /// </summary>
+    public bool SpawnRareWeaponUpgrade(Vector3 position)
+    {
+        if (rareWeaponUpgradePrefab == null)
+        {
+            Debug.LogWarning("[GameManager] No rare weapon upgrade prefab assigned!");
+            return false;
+        }
+        UnityEngine.Object.Instantiate(rareWeaponUpgradePrefab, position, Quaternion.identity);
+        DLog("[GameManager] Spawned rare weapon upgrade at " + position);
         return true;
     }
 
@@ -875,14 +1001,81 @@ public class GameManager : MonoBehaviour
         if (_pendingResetOnSceneLoad)
         {
             _pendingResetOnSceneLoad = false;
-            ResetRun(true);
-            BeginWave(currentWave);
-            StartCoroutine(DeferredRebroadcastAllStats());
+            StartCoroutine(InitializeAfterSceneLoad());
         }
         else
         {
             if (_runActive && !_inInterWave) BeginWave(currentWave);
             StartCoroutine(DeferredRebroadcastAllStats());
+        }
+    }
+
+    private IEnumerator InitializeAfterSceneLoad()
+    {
+        // Wait a bit for scene to settle
+        yield return new WaitForSeconds(0.2f);
+        
+        // CRITICAL: Trigger NavMesh baking using your existing NavMeshRuntimeBaker
+        bool navMeshBaked = false;
+        NavMeshRuntimeBaker navBaker = FindObjectOfType<NavMeshRuntimeBaker>();
+        
+        if (navBaker != null)
+        {
+            DLog("[GameManager] Found NavMeshRuntimeBaker, requesting bake...");
+            
+            // Request bake from the runtime baker
+            navBaker.RequestBake(this);
+            
+            // Wait for bake to complete (max 5 seconds)
+            float waitTime = 0f;
+            while (!navBaker.BakeCompleted && waitTime < 5f)
+            {
+                yield return new WaitForSeconds(0.2f);
+                waitTime += 0.2f;
+            }
+            
+            if (navBaker.BakeCompleted)
+            {
+                DLog($"[GameManager] NavMesh bake completed in {waitTime:F1}s");
+                navMeshBaked = true;
+            }
+            else
+            {
+                Debug.LogWarning($"[GameManager] NavMesh bake timeout after {waitTime:F1}s");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] NavMeshRuntimeBaker not found! NavMesh may not be available.");
+            // Fallback: wait a bit and hope for the best
+            yield return new WaitForSeconds(1.0f);
+        }
+        
+        // Reset the run
+        ResetRun(true);
+        
+        // Wait another frame for weapon reset to complete
+        yield return null;
+        
+        // Wait a bit more to ensure UI components are ready
+        yield return new WaitForSeconds(0.2f);
+        
+        // Start the wave
+        BeginWave(currentWave);
+        
+        // Rebroadcast all stats
+        StartCoroutine(DeferredRebroadcastAllStats());
+    }
+    
+    private void TriggerNavMeshBake()
+    {
+        // This method is now handled in InitializeAfterSceneLoad
+        // Keeping it for backward compatibility
+        NavMeshRuntimeBaker navBaker = FindObjectOfType<NavMeshRuntimeBaker>();
+        if (navBaker != null)
+        {
+            DLog("[GameManager] Triggering NavMeshRuntimeBaker...");
+            navBaker.RequestBake(this);
         }
     }
 
@@ -930,7 +1123,7 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("[GameManager] No helicopter part prefabs assigned!");
 
         if (helicopterPartDropChance <= 0f)
-            Debug.LogWarning("[GameManager] HelicopterPartDropChance is 0 — parts will NEVER drop.");
+            Debug.LogWarning("[GameManager] HelicopterPartDropChance is 0 ï¿½ parts will NEVER drop.");
 
         bool anyWeapon =
             (bossWeaponDropPrefabs != null && bossWeaponDropPrefabs.Length > 0) ||

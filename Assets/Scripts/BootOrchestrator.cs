@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Reflection;
 
@@ -27,6 +28,24 @@ public class BootOrchestrator : MonoBehaviour
 
     private static bool s_BootStarted;
     private Coroutine _bootRoutine;
+    
+    private void OnEnable()
+    {
+        // Subscribe to scene loaded to reset boot state on reload
+        SceneManager.sceneLoaded += OnSceneReloaded;
+    }
+    
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneReloaded;
+    }
+    
+    private void OnSceneReloaded(Scene scene, LoadSceneMode mode)
+    {
+        // Reset boot state to allow rebaking on scene reload
+        if (verboseLogs) Debug.Log($"[Boot] Scene reloaded: {scene.name}, resetting boot state");
+        s_BootStarted = false;
+    }
 
     private void Awake()
     {
