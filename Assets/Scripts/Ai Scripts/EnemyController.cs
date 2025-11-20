@@ -14,6 +14,14 @@ public class EnemyController : MonoBehaviour
     public float wanderRadius = 15f;
     public float wanderInterval = 5f;
 
+    [Header("Wave Scaling")]
+    [Tooltip("If true, enemy health will scale based on the wave number it spawned from.")]
+    public bool enableWaveHealthScaling = true;
+    [Tooltip("The wave number this enemy spawned from (set automatically by spawner).")]
+    [SerializeField] private int spawnWave = 1;
+    [Tooltip("Base health before wave multiplier is applied.")]
+    [SerializeField] private float baseHealth = 0f;
+
     [Header("Targeting")]
     [Tooltip("Layers considered valid targets when searching (optional). If empty, tags are used.")]
     public LayerMask targetLayers = ~0;
@@ -147,6 +155,32 @@ public class EnemyController : MonoBehaviour
 
     /// <summary>Intentionally empty: scaling is handled by GameManager on first engage.</summary>
     public void OnBossHealthScaled(float scaledMax) { }
+
+    /// <summary>
+    /// Sets the wave number this enemy spawned from and applies the wave-based health multiplier.
+    /// Wave 1 = 1x health, Wave 2 = 2x health, Wave 3 = 3x health, etc.
+    /// </summary>
+    public void SetSpawnWave(int wave)
+    {
+        spawnWave = Mathf.Max(1, wave);
+
+        // Don't scale boss/mini-boss health - they have their own scaling systems
+        if (IsBoss() || GetComponent<MiniBoss>() != null || !enableWaveHealthScaling)
+            return;
+
+        // Store base health on first call
+        if (baseHealth <= 0f)
+            baseHealth = maxHealth;
+
+        // Apply wave multiplier: wave 1 = 1x, wave 2 = 2x, wave 3 = 3x, etc.
+        float multiplier = spawnWave;
+        float scaledHealth = baseHealth * multiplier;
+
+        ForceSetMaxHealth(scaledHealth, keepPercent: false);
+    }
+
+    /// <summary>Returns the wave number this enemy spawned from.</summary>
+    public int GetSpawnWave() => spawnWave;
 
     protected virtual void Start()
     {
@@ -675,7 +709,7 @@ public class EnemyController : MonoBehaviour
             }
         }
 
-        // 3) Local loot drops (okay if these fail—they no longer block stats)
+        // 3) Local loot drops (okay if these failï¿½they no longer block stats)
         try { DropCoins(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropCoins threw: {ex}"); }
         try { DropHealth(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropHealth threw: {ex}"); }
         try { DropAmmo(); } catch (Exception ex) { Debug.LogError($"[EnemyController] DropAmmo threw: {ex}"); }

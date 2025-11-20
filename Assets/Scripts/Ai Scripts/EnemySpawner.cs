@@ -160,7 +160,7 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("Bypass offscreen/overlap/legacy relative-to-player filters when true. NOTE: Absolute height and strict/distance-aware ceilings are ALWAYS enforced.")]
     public bool debugBypassFilters = false;   // default false so filters run by default
     [Tooltip("Guarantee at least 1 attempt per tick if pool/cap allow.")]
-    public bool ensureAtLeastOne = false;     // disabled; we’ll batch force instead
+    public bool ensureAtLeastOne = false;     // disabled; weï¿½ll batch force instead
     [Tooltip("Max emergency spawns when normal produced 0 or not enough.")]
     public int forcedSpawnCount = 25;         // bigger emergency batches
     [Tooltip("If true, anchor to this spawner when player is missing.")]
@@ -271,7 +271,7 @@ public class EnemySpawner : MonoBehaviour
     private void HandleBakeCompleted()
     {
         navReady = true;
-        if (debugLogs) Debug.Log("[EnemySpawner] NavMesh bake completed—spawning enabled.");
+        if (debugLogs) Debug.Log("[EnemySpawner] NavMesh bake completedï¿½spawning enabled.");
         StartSpawnLoopIfNeeded();
     }
 
@@ -324,7 +324,7 @@ public class EnemySpawner : MonoBehaviour
 
         while (true)
         {
-            // Player may be missing — we can still spawn around this spawner
+            // Player may be missing ï¿½ we can still spawn around this spawner
             if (!player && spawnIfNoPlayer)
             {
                 GameObject p = GameObject.FindGameObjectWithTag("Player");
@@ -536,6 +536,16 @@ public class EnemySpawner : MonoBehaviour
                 enemy.transform.position = pos;
                 enemy.SetActive(true);
 
+                // Apply wave-based health scaling
+                if (GameManager.Instance != null)
+                {
+                    EnemyController ec = enemy.GetComponent<EnemyController>();
+                    if (ec != null)
+                    {
+                        ec.SetSpawnWave(GameManager.Instance.CurrentWave);
+                    }
+                }
+
                 AgentAutoBaseOffset auto = enemy.GetComponent<AgentAutoBaseOffset>();
                 if (auto) auto.RecomputeNow();
                 StartCoroutine(FinalSnapToGround(enemy));
@@ -617,6 +627,16 @@ public class EnemySpawner : MonoBehaviour
                 if (agent) { if (!agent.enabled) agent.enabled = true; agent.Warp(pos); }
                 enemy.transform.position = pos;
                 enemy.SetActive(true);
+
+                // Apply wave-based health scaling
+                if (GameManager.Instance != null)
+                {
+                    EnemyController ec = enemy.GetComponent<EnemyController>();
+                    if (ec != null)
+                    {
+                        ec.SetSpawnWave(GameManager.Instance.CurrentWave);
+                    }
+                }
 
                 AgentAutoBaseOffset auto = enemy.GetComponent<AgentAutoBaseOffset>();
                 if (auto) auto.RecomputeNow();

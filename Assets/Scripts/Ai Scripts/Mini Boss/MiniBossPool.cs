@@ -166,6 +166,17 @@ public class MiniBossPool : MonoBehaviour
         }
 
         go.SetActive(true);
+
+        // Apply wave-based health scaling (will be skipped for MiniBoss, but ensures consistency)
+        if (GameManager.Instance != null)
+        {
+            EnemyController ec = go.GetComponent<EnemyController>();
+            if (ec != null)
+            {
+                ec.SetSpawnWave(GameManager.Instance.CurrentWave);
+            }
+        }
+
         return go;
     }
 
