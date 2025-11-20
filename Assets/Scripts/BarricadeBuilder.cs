@@ -109,6 +109,20 @@ public class BarricadeBuilder : MonoBehaviour
         // Hover highlight (before clicks so state is fresh)
         if (highlightOnHover) UpdateHoverHighlight();
 
+#if ENABLE_INPUT_SYSTEM
+        // New Input System
+        if (UnityEngine.InputSystem.Mouse.current != null)
+        {
+            // Place on LMB
+            if (UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame && !IsPointerOverUI())
+                TryPlace();
+
+            // Remove + refund on RMB
+            if (UnityEngine.InputSystem.Mouse.current.rightButton.wasPressedThisFrame && !IsPointerOverUI())
+                TryRemoveAtMouse();
+        }
+#else
+        // Old Input Manager
         // Place on LMB
         if (Input.GetMouseButtonDown(0) && !IsPointerOverUI())
             TryPlace();
@@ -116,15 +130,6 @@ public class BarricadeBuilder : MonoBehaviour
         // Remove + refund on RMB
         if (Input.GetMouseButtonDown(1) && !IsPointerOverUI())
             TryRemoveAtMouse();
-
-#if ENABLE_INPUT_SYSTEM
-        // Fallback for New Input System only projects
-        if (UnityEngine.InputSystem.Mouse.current != null &&
-            UnityEngine.InputSystem.Mouse.current.rightButton.wasPressedThisFrame &&
-            !IsPointerOverUI())
-        {
-            TryRemoveAtMouse();
-        }
 #endif
     }
 
@@ -215,7 +220,7 @@ public class BarricadeBuilder : MonoBehaviour
             }
         }
 
-        // 5) Rotation (upright, snapped to 90°)
+        // 5) Rotation (upright, snapped to 90ï¿½)
         float yaw = Mathf.Round(mainCamera.transform.eulerAngles.y / 90f) * 90f;
         Quaternion rot = Quaternion.Euler(0f, yaw, 0f);
 
