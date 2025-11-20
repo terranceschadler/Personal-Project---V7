@@ -390,7 +390,7 @@ MonoBehaviour:
   healthBarLocalOffset: {x: 0, y: 2.5, z: 0}
   showOnlyWhenDamaged: 1
   healthBarVisibleDuration: 3
-  barWorldWidth: 0.06
+  barWorldWidth: 0.02
   barWorldHeight: 0.02
   billboardHealthBar: 1
   debugLogs: 0
