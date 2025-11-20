@@ -65,7 +65,7 @@ public class MapModeController : MonoBehaviour
     [Tooltip("Key used to 'click' under the fake cursor (A button also works).")]
     public KeyCode selectKey = KeyCode.Return;
 
-    [Header("Cursor – Debugging Helpers")]
+    [Header("Cursor ï¿½ Debugging Helpers")]
     [Tooltip("Also move fake cursor from mouse delta (helps prove canvas/cursor wiring).")]
     public bool enableMouseDeltaAssist = false;
     [Tooltip("Mouse assist multiplier relative to cursorSpeed.")]
@@ -73,7 +73,7 @@ public class MapModeController : MonoBehaviour
     [Tooltip("Spam a short log when RS is zero while map is open.")]
     public bool logZeroRightStick = false;
 
-    [Header("Cursor – Flick Snap (Optional)")]
+    [Header("Cursor ï¿½ Flick Snap (Optional)")]
     [Tooltip("If enabled, a quick right-stick flick snaps the cursor to the nearest visible icon.")]
     public bool enableFlickSnap = true;
     [Range(0.1f, 1f)] public float flickMagnitudeThreshold = 0.75f;
@@ -213,7 +213,15 @@ public class MapModeController : MonoBehaviour
         HandleCursorMoveAndClick();
         UpdateIconScreenPositions();
 
-        if (Input.GetKeyDown(KeyCode.Escape)) CloseMap();
+#if ENABLE_INPUT_SYSTEM
+        // New Input System
+        bool escPressed = UnityEngine.InputSystem.Keyboard.current != null &&
+                          UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame;
+#else
+        // Old Input Manager
+        bool escPressed = Input.GetKeyDown(KeyCode.Escape);
+#endif
+        if (escPressed) CloseMap();
     }
 
     // --- Public API for MapKeyArea registration ---
@@ -349,13 +357,21 @@ public class MapModeController : MonoBehaviour
 
     private void HandleToggleInput()
     {
-        bool pressed = Input.GetKeyDown(KeyCode.M) ||
-                       Input.GetKeyDown(KeyCode.JoystickButton6) || // Back
-                       Input.GetKeyDown(KeyCode.JoystickButton7);   // Start
 #if ENABLE_INPUT_SYSTEM
+        // New Input System
+        bool pressed = false;
+        if (UnityEngine.InputSystem.Keyboard.current != null)
+        {
+            pressed = UnityEngine.InputSystem.Keyboard.current.mKey.wasPressedThisFrame;
+        }
         if (!pressed && Gamepad.current != null &&
             (Gamepad.current.selectButton.wasPressedThisFrame || Gamepad.current.startButton.wasPressedThisFrame))
             pressed = true;
+#else
+        // Old Input Manager
+        bool pressed = Input.GetKeyDown(KeyCode.M) ||
+                       Input.GetKeyDown(KeyCode.JoystickButton6) || // Back
+                       Input.GetKeyDown(KeyCode.JoystickButton7);   // Start
 #endif
         if (pressed) { if (_mapOpen) CloseMap(); else OpenMap(); }
     }
@@ -371,10 +387,23 @@ public class MapModeController : MonoBehaviour
             Vector2 pan = Vector2.zero;
 
             // Keyboard
+#if ENABLE_INPUT_SYSTEM
+            // New Input System
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                var key = UnityEngine.InputSystem.Keyboard.current;
+                if (key.dKey.isPressed || key.rightArrowKey.isPressed) pan.x += 1f;
+                if (key.aKey.isPressed || key.leftArrowKey.isPressed) pan.x -= 1f;
+                if (key.wKey.isPressed || key.upArrowKey.isPressed) pan.y += 1f;
+                if (key.sKey.isPressed || key.downArrowKey.isPressed) pan.y -= 1f;
+            }
+#else
+            // Old Input Manager
             if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) pan.x += 1f;
             if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) pan.x -= 1f;
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) pan.y += 1f;
             if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) pan.y -= 1f;
+#endif
 
             // Gamepad (your unified wrapper)
             pan += GamepadInput.LeftStick;
@@ -506,10 +535,10 @@ public class MapModeController : MonoBehaviour
         }
         else if (logZeroRightStick)
         {
-            Debug.Log("[MapModeController] RightStick: (0,0) — if cursor doesn't move, verify Input Manager axes match GamepadInput constants.");
+            Debug.Log("[MapModeController] RightStick: (0,0) ï¿½ if cursor doesn't move, verify Input Manager axes match GamepadInput constants.");
         }
 
-        // Optional mouse delta assist (debugging) — ignored if not using gamepad modality
+        // Optional mouse delta assist (debugging) ï¿½ ignored if not using gamepad modality
         if (enableMouseDeltaAssist)
         {
             var md = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));

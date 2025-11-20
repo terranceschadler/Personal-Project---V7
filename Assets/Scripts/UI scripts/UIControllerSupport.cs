@@ -36,11 +36,30 @@ public class UIControllerSupport : MonoBehaviour
 
     bool AnyNavOrSubmitPressed()
     {
-        // Old Input Manager axes (left stick / DPad if mapped), plus A/B as Submit/Cancel
         float h = 0f, v = 0f;
+        bool submit = false;
+        bool cancel = false;
+
+#if ENABLE_INPUT_SYSTEM
+        // New Input System
+        if (UnityEngine.InputSystem.Keyboard.current != null)
+        {
+            var key = UnityEngine.InputSystem.Keyboard.current;
+            submit = key.enterKey.wasPressedThisFrame || key.numpadEnterKey.wasPressedThisFrame;
+            cancel = key.escapeKey.wasPressedThisFrame;
+        }
+        if (UnityEngine.InputSystem.Gamepad.current != null)
+        {
+            var pad = UnityEngine.InputSystem.Gamepad.current;
+            if (pad.buttonSouth.wasPressedThisFrame) submit = true; // A button
+            if (pad.buttonEast.wasPressedThisFrame) cancel = true;  // B button
+        }
+#else
+        // Old Input Manager axes (left stick / DPad if mapped), plus A/B as Submit/Cancel
         try { h = Input.GetAxisRaw("Horizontal"); v = Input.GetAxisRaw("Vertical"); } catch { }
-        bool submit = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.JoystickButton0);
-        bool cancel = Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton1);
+        submit = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.JoystickButton0);
+        cancel = Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton1);
+#endif
         return Mathf.Abs(h) > 0.1f || Mathf.Abs(v) > 0.1f || submit || cancel;
     }
 

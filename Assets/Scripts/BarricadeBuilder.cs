@@ -91,7 +91,15 @@ public class BarricadeBuilder : MonoBehaviour
     void Update()
     {
         // Toggle build mode
-        if (Input.GetKeyDown(KeyCode.B))
+#if ENABLE_INPUT_SYSTEM
+        // New Input System
+        bool bKeyPressed = UnityEngine.InputSystem.Keyboard.current != null &&
+                           UnityEngine.InputSystem.Keyboard.current.bKey.wasPressedThisFrame;
+#else
+        // Old Input Manager
+        bool bKeyPressed = Input.GetKeyDown(KeyCode.B);
+#endif
+        if (bKeyPressed)
         {
             isBuilding = !isBuilding;
             if (isBuilding) EnterBuildMode();
