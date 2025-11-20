@@ -146,7 +146,7 @@ MonoBehaviour:
   minHealthDrops: 1
   maxHealthDrops: 1
   ammoPrefab: {fileID: 3181481546586881577, guid: 38f463cf95c2a8348bdf5b8c7d1e8870, type: 3}
-  ammoDropChance: 0.33
+  ammoDropChance: 0.5
   minAmmoDrops: 1
   maxAmmoDrops: 2
   killScore: 10
@@ -390,8 +390,13 @@ MonoBehaviour:
   healthBarLocalOffset: {x: 0, y: 2.5, z: 0}
   showOnlyWhenDamaged: 1
   healthBarVisibleDuration: 3
+<<<<<<< Updated upstream
   barWorldWidth: 0.06
   barWorldHeight: 0.02
+=======
+  barWorldWidth: 0.01
+  barWorldHeight: 0.01
+>>>>>>> Stashed changes
   billboardHealthBar: 1
   debugLogs: 0
 --- !u!114 &2824275960644675723

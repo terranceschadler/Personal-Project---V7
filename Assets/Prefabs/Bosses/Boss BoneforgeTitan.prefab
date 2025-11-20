@@ -777,8 +777,8 @@ MonoBehaviour:
   healthLootChance: 0.25
   minHealthDrops: 1
   maxHealthDrops: 1
-  ammoPrefab: {fileID: 0}
-  ammoDropChance: 0.3
+  ammoPrefab: {fileID: 3181481546586881577, guid: 38f463cf95c2a8348bdf5b8c7d1e8870, type: 3}
+  ammoDropChance: 1
   minAmmoDrops: 1
   maxAmmoDrops: 2
   killScore: 10

@@ -107,11 +107,17 @@ public class MiniBoss : MonoBehaviour
     [Tooltip("How long to keep health bar visible after last damage (seconds)")]
     [Min(0f)] public float healthBarVisibleDuration = 3f;
     [Tooltip("World width of the health bar canvas")]
+<<<<<<< Updated upstream
     [Min(0.02f)] public float barWorldWidth = 0.5f;
     [Tooltip("World height of the health bar canvas")]
     [Min(0.02f)] public float barWorldHeight = 0.06f;
     [Tooltip("Scale multiplier for the health bar (smaller = smaller bar)")]
     public float healthBarScale = 0.003f;
+=======
+    [Min(0.001f)] public float barWorldWidth = 0.6f;
+    [Tooltip("World height of the health bar canvas")]
+    [Min(0.001f)] public float barWorldHeight = 0.08f;
+>>>>>>> Stashed changes
     [Tooltip("Always face camera (billboard effect)")]
     public bool billboardHealthBar = true;
 
@@ -298,13 +304,13 @@ public class MiniBoss : MonoBehaviour
                                 : Mathf.Max(1f, sizeToHealthCurve.Evaluate(_chosenScale));
         if (maxHealthCap > 0f) hp = Mathf.Min(hp, maxHealthCap);
 
-        // Mini bosses have 5x the calculated health
-        hp *= 5f;
+
+
 
         _targetMax = Mathf.Max(1f, hp);
 
         if (debugLogs)
-            Debug.Log($"[MiniBoss] Computed scale={_chosenScale:0.00} targetMaxHP={_targetMax:0} (5x multiplier applied)");
+            Debug.Log($"[MiniBoss] Computed scale={_chosenScale:0.00} targetMaxHP={_targetMax:0}");
     }
 
     private void ApplyScale()
@@ -971,7 +977,17 @@ public class MiniBoss : MonoBehaviour
         targetScale.y = Mathf.Clamp(targetScale.y, minS, maxS);
         targetScale.z = Mathf.Clamp(targetScale.z, minS, maxS);
 
+<<<<<<< Updated upstream
         _hbTransform.localScale = targetScale;
+=======
+        // Apply the desired world size as scale multipliers
+        float sizeScale = Mathf.Min(barWorldWidth, barWorldHeight);
+        invParent.x *= sizeScale;
+        invParent.y *= sizeScale;
+        invParent.z *= sizeScale;
+
+        _hbTransform.localScale = invParent;
+>>>>>>> Stashed changes
     }
 
     private void SafeDestroyHealthBar()
