@@ -356,11 +356,26 @@ public class PlayerController : MonoBehaviour
             if (dashEnabled && Time.time >= nextDashAllowedTime)
             {
                 // Exception-free Dash input
+#if ENABLE_INPUT_SYSTEM
+                // New Input System
+                bool tryDash = false;
+                if (UnityEngine.InputSystem.Keyboard.current != null)
+                {
+                    var key = UnityEngine.InputSystem.Keyboard.current;
+                    // Check the configured dash key
+                    if (dashKey == KeyCode.LeftShift && key.leftShiftKey.wasPressedThisFrame) tryDash = true;
+                    else if (dashKey == KeyCode.RightShift && key.rightShiftKey.wasPressedThisFrame) tryDash = true;
+                    else if (dashKey == KeyCode.Space && key.spaceKey.wasPressedThisFrame) tryDash = true;
+                    // Add more key mappings as needed
+                }
+#else
+                // Old Input Manager
                 bool tryDash = Input.GetKeyDown(dashKey);
                 if (!tryDash && dashButtonAvailable)
                 {
                     tryDash = Input.GetButtonDown("Dash");
                 }
+#endif
 
                 if (tryDash)
                 {
@@ -487,8 +502,23 @@ public class PlayerController : MonoBehaviour
 
     Vector2 GetMoveInput()
     {
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
+        float h = 0f;
+        float v = 0f;
+
+#if ENABLE_INPUT_SYSTEM
+        // New Input System
+        if (UnityEngine.InputSystem.Keyboard.current != null)
+        {
+            var key = UnityEngine.InputSystem.Keyboard.current;
+            if (key.dKey.isPressed || key.rightArrowKey.isPressed) h += 1f;
+            if (key.aKey.isPressed || key.leftArrowKey.isPressed) h -= 1f;
+            if (key.wKey.isPressed || key.upArrowKey.isPressed) v += 1f;
+            if (key.sKey.isPressed || key.downArrowKey.isPressed) v -= 1f;
+        }
+#else
+        // Old Input Manager
+        h = Input.GetAxisRaw("Horizontal");
+        v = Input.GetAxisRaw("Vertical");
 
         if (Mathf.Approximately(h, 0f) && Mathf.Approximately(v, 0f))
         {
@@ -497,6 +527,7 @@ public class PlayerController : MonoBehaviour
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) v += 1f;
             if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) v -= 1f;
         }
+#endif
 
         Vector2 ls = GamepadInput.LeftStick;
         if (ls.sqrMagnitude > 0.01f)
