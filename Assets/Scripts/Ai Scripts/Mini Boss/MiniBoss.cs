@@ -107,17 +107,9 @@ public class MiniBoss : MonoBehaviour
     [Tooltip("How long to keep health bar visible after last damage (seconds)")]
     [Min(0f)] public float healthBarVisibleDuration = 3f;
     [Tooltip("World width of the health bar canvas")]
-<<<<<<< Updated upstream
-    [Min(0.02f)] public float barWorldWidth = 0.5f;
-    [Tooltip("World height of the health bar canvas")]
-    [Min(0.02f)] public float barWorldHeight = 0.06f;
-    [Tooltip("Scale multiplier for the health bar (smaller = smaller bar)")]
-    public float healthBarScale = 0.003f;
-=======
     [Min(0.001f)] public float barWorldWidth = 0.6f;
     [Tooltip("World height of the health bar canvas")]
     [Min(0.001f)] public float barWorldHeight = 0.08f;
->>>>>>> Stashed changes
     [Tooltip("Always face camera (billboard effect)")]
     public bool billboardHealthBar = true;
 
@@ -968,18 +960,15 @@ public class MiniBoss : MonoBehaviour
             parent.z != 0 ? 1f / parent.z : 1f
         );
 
-        // Apply the healthBarScale multiplier to get correct world size
-        Vector3 targetScale = invParent * healthBarScale;
+
+
 
         // Safe clamps
         float minS = 0.0001f, maxS = 10f;
-        targetScale.x = Mathf.Clamp(targetScale.x, minS, maxS);
-        targetScale.y = Mathf.Clamp(targetScale.y, minS, maxS);
-        targetScale.z = Mathf.Clamp(targetScale.z, minS, maxS);
+        invParent.x = Mathf.Clamp(invParent.x, minS, maxS);
+        invParent.y = Mathf.Clamp(invParent.y, minS, maxS);
+        invParent.z = Mathf.Clamp(invParent.z, minS, maxS);
 
-<<<<<<< Updated upstream
-        _hbTransform.localScale = targetScale;
-=======
         // Apply the desired world size as scale multipliers
         float sizeScale = Mathf.Min(barWorldWidth, barWorldHeight);
         invParent.x *= sizeScale;
@@ -987,7 +976,6 @@ public class MiniBoss : MonoBehaviour
         invParent.z *= sizeScale;
 
         _hbTransform.localScale = invParent;
->>>>>>> Stashed changes
     }
 
     private void SafeDestroyHealthBar()

@@ -634,6 +634,9 @@ MonoBehaviour:
   showAllStats: 1
   updateEveryFrame: 0
   updateInterval: 0.5
+  useStandardFormatting: 1
+  showDebugInfo: 0
+  trackUpdateCalls: 0
 --- !u!114 &347101024
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2758,7 +2761,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 1327456016}
   miniBossPrefabs:
-  - {fileID: 3171248502968128322, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+  - {fileID: 7162652531693402662, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
   minInterval: 3
   maxInterval: 10
   maxConcurrent: 20
@@ -3386,6 +3389,10 @@ MonoBehaviour:
   maxHealthPickupPrefab: {fileID: 6441928423980564283, guid: defe7e944ff3be643bc95304bb708c46, type: 3}
   maxHealthPickupDropChance: 1
   maxHealthPickupOffset: {x: -0.75, y: 0, z: -0.75}
+  epicWeaponUpgradePrefab: {fileID: 0}
+  rareWeaponUpgradePrefab: {fileID: 0}
+  weaponUpgradeDropChance: 0.7
+  weaponUpgradeOffset: {x: 0, y: 0, z: -0.75}
   helicopterPartPrefab: {fileID: 0}
   helicopterPartPrefabs:
   - {fileID: 8119292090307705823, guid: 2a61172bdcc8b7a4b959fa122dcfc11d, type: 3}
@@ -3774,6 +3781,63 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9b04fc1a744a6dc468ae9d0540713b28, type: 3}
+--- !u!1001 &3242088771841324823
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 7162652531693402662, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_Name
+      value: Boss Mini
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 26.49871
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.2513
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -3799,3 +3863,4 @@ SceneRoots:
   - {fileID: 2127934814}
   - {fileID: 1240049132}
   - {fileID: 1711508421}
+  - {fileID: 3242088771841324823}

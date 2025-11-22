@@ -183,6 +183,9 @@ MonoBehaviour:
   damageRate: 2
   wanderRadius: 15
   wanderInterval: 5
+  enableWaveHealthScaling: 1
+  spawnWave: 1
+  baseHealth: 0
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -196,7 +199,7 @@ MonoBehaviour:
   minCoins: 1
   maxCoins: 1
   healthLootPrefab: {fileID: 6441928423980564283, guid: cab0018b27cc99241b165ca69af30271, type: 3}
-  healthLootChance: 0.1
+  healthLootChance: 0.25
   minHealthDrops: 1
   maxHealthDrops: 1
   ammoPrefab: {fileID: 3181481546586881577, guid: 38f463cf95c2a8348bdf5b8c7d1e8870, type: 3}
