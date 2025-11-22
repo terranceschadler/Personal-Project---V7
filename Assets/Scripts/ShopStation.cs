@@ -34,8 +34,24 @@ public class ShopStation : MonoBehaviour
     {
         if (playerInRange && player != null)
         {
+#if ENABLE_INPUT_SYSTEM
+            // New Input System
+            bool hKeyPressed = false;
+            bool wKeyPressed = false;
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                var key = UnityEngine.InputSystem.Keyboard.current;
+                hKeyPressed = key.hKey.wasPressedThisFrame;
+                wKeyPressed = key.wKey.wasPressedThisFrame;
+            }
+#else
+            // Old Input Manager
+            bool hKeyPressed = Input.GetKeyDown(KeyCode.H);
+            bool wKeyPressed = Input.GetKeyDown(KeyCode.W);
+#endif
+
             // Buy Health
-            if (Input.GetKeyDown(KeyCode.H))
+            if (hKeyPressed)
             {
                 if (GameManager.Instance.SpendCoins(healthCost))
                 {
@@ -45,7 +61,7 @@ public class ShopStation : MonoBehaviour
             }
 
             // Buy Weapon
-            if (Input.GetKeyDown(KeyCode.W))
+            if (wKeyPressed)
             {
                 if (GameManager.Instance.SpendCoins(weaponCost))
                 {

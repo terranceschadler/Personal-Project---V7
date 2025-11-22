@@ -147,7 +147,21 @@ public class EscPauseUI : MonoBehaviour
 
     private bool PressedPause()
     {
+#if ENABLE_INPUT_SYSTEM
+        // New Input System
+        bool key = false;
+        if (UnityEngine.InputSystem.Keyboard.current != null)
+        {
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            // Check the configured pause key
+            if (pauseKey == KeyCode.Escape && kb.escapeKey.wasPressedThisFrame) key = true;
+            else if (pauseKey == KeyCode.P && kb.pKey.wasPressedThisFrame) key = true;
+            // Add more key mappings as needed
+        }
+#else
+        // Old Input Manager
         bool key = Input.GetKeyDown(pauseKey);
+#endif
         if (enableGamepadPause)
             key |= GamepadInput.Start_Pressed;
         return key;
