@@ -192,6 +192,26 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        float frameTime = Time.deltaTime * 1000f; // Convert to milliseconds
+        
+        // DIAGNOSTIC: Check if game is paused
+        if (Time.timeScale != 1f)
+        {
+            // Only log once when paused starts
+            if (Time.timeScale == 0f)
+                Debug.LogWarning($"[PlayerController] TimeScale is {Time.timeScale} - movement paused!", this);
+        }
+        
+        // DIAGNOSTIC: Detect frame spikes (hitching)
+        if (frameTime > 50f) // Over 50ms = noticeable hitch
+        {
+            Debug.LogError($"[PlayerController] FRAME SPIKE DETECTED! Frame took {frameTime:F1}ms (frame {Time.frameCount})", this);
+        }
+        else if (frameTime > 33f) // Over 33ms = under 30 FPS
+        {
+            Debug.LogWarning($"[PlayerController] Long frame: {frameTime:F1}ms (frame {Time.frameCount})", this);
+        }
+        
         HandleMovement(); // includes dash evaluation + application
         AimWithPriorityAndSnap();
 

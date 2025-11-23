@@ -29,13 +29,13 @@ public class IntegratedUpgradeSystem : MonoBehaviour
     {
         // Auto-find references if not assigned
         if (weaponController == null)
-            weaponController = FindObjectOfType<PlayerWeaponController>();
+            weaponController = FindFirstObjectByType<PlayerWeaponController>();
         
         if (upgradeGenerator == null)
-            upgradeGenerator = FindObjectOfType<UpgradeGenerator>();
+            upgradeGenerator = FindFirstObjectByType<UpgradeGenerator>();
         
         if (selectionUI == null)
-            selectionUI = FindObjectOfType<UpgradeSelectionUI>();
+            selectionUI = FindFirstObjectByType<UpgradeSelectionUI>();
         
         if (upgradeGenerator == null)
         {

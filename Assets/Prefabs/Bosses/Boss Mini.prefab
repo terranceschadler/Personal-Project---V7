@@ -135,7 +135,7 @@ GameObject:
   - component: {fileID: 3788076192045357275}
   - component: {fileID: 4606304693612381144}
   - component: {fileID: 1605600881832002540}
-  - component: {fileID: -6827908092982471171}
+  - component: {fileID: -5418354666123436422}
   m_Layer: 6
   m_Name: Boss Mini
   m_TagString: BossEnemy
@@ -481,8 +481,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyUpgradeDropper
   upgradePrefab: {fileID: 846759565602956284, guid: f02aeb3294c4fb8429c4516208c0a800, type: 3}
-  dropChance: 0.15
-  alwaysDropFromBosses: 1
+  dropChance: 0.05
+  alwaysDropFromBosses: 0
   debugLogs: 0
   spawnOffset: {x: 0, y: 0.5, z: 0}
   spawnForce: 2
@@ -562,8 +562,8 @@ MonoBehaviour:
   barWorldWidth: 0.05
   barWorldHeight: 0.01
   billboardHealthBar: 1
-  debugLogs: 1
---- !u!114 &-6827908092982471171
+  debugLogs: 0
+--- !u!114 &-5418354666123436422
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

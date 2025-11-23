@@ -45,7 +45,7 @@ public class IntegrationVerification : MonoBehaviour
         bool allGood = true;
         
         // Check for IntegratedUpgradeSystem
-        IntegratedUpgradeSystem upgradeSystem = FindObjectOfType<IntegratedUpgradeSystem>();
+        IntegratedUpgradeSystem upgradeSystem = FindFirstObjectByType<IntegratedUpgradeSystem>();
         if (upgradeSystem != null)
         {
             Debug.Log("✅ IntegratedUpgradeSystem found");
@@ -109,7 +109,7 @@ public class IntegrationVerification : MonoBehaviour
         }
         
         // Check for UI
-        UpgradeSelectionUI selectionUI = FindObjectOfType<UpgradeSelectionUI>();
+        UpgradeSelectionUI selectionUI = FindFirstObjectByType<UpgradeSelectionUI>();
         if (selectionUI != null)
         {
             Debug.Log("✅ UpgradeSelectionUI found");
@@ -152,7 +152,7 @@ public class IntegrationVerification : MonoBehaviour
         }
         
         // Check for Canvas
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas != null)
         {
             Debug.Log("✅ Canvas found");
@@ -181,7 +181,7 @@ public class IntegrationVerification : MonoBehaviour
         }
         
         // Check for enemies with droppers
-        EnemyUpgradeDropper[] droppers = FindObjectsOfType<EnemyUpgradeDropper>();
+        EnemyUpgradeDropper[] droppers = FindObjectsByType<EnemyUpgradeDropper>(FindObjectsSortMode.None);
         if (droppers.Length > 0)
         {
             Debug.Log($"✅ Found {droppers.Length} enemies with EnemyUpgradeDropper");
@@ -217,7 +217,7 @@ public class IntegrationVerification : MonoBehaviour
     [MenuItem("Tools/Upgrade System/Verify Integration")]
     static void VerifyIntegrationMenu()
     {
-        IntegrationVerification verification = FindObjectOfType<IntegrationVerification>();
+        IntegrationVerification verification = FindFirstObjectByType<IntegrationVerification>();
         
         if (verification == null)
         {

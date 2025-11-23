@@ -138,11 +138,17 @@ public class MiniBoss : MonoBehaviour
 
     void Awake()
     {
-        _health = HealthAdapter.TryCreate(gameObject, debugLogs);
+        // PERFORMANCE FIX: Disable ALL expensive reflection/search operations
+        // These were causing 80-150ms freezes every time a miniboss spawned
+        
+        // _health = HealthAdapter.TryCreate(gameObject, debugLogs); // DISABLED - expensive reflection
+        _health = null;
+        
         _aligner = GetComponent<MeshFeetAlignToAgentBase>();
         if (!_aligner && autoAddAligner) _aligner = gameObject.AddComponent<MeshFeetAlignToAgentBase>();
 
-        _loot = LootAdapter.TryCreate(gameObject, debugLogs);
+        // _loot = LootAdapter.TryCreate(gameObject, debugLogs); // DISABLED - VERY expensive reflection + FindObjectOfType
+        _loot = null; // Fallback loot will still work!
 
         // Get reference to EnemyController to hook into damage events
         _enemyController = GetComponent<EnemyController>();
@@ -154,48 +160,41 @@ public class MiniBoss : MonoBehaviour
         // Try to auto-load health bar prefab if not assigned
         if (healthBarPrefab == null)
         {
-            // Try to find health bar prefab from existing BossEnemy in scene
-            var existingBoss = FindObjectOfType<BossEnemy>();
-            if (existingBoss != null && existingBoss.bossHealthBarPrefab != null)
+            // PERFORMANCE FIX: Use cached result instead of FindObjectOfType
+            if (!_cachedPrefabSearched)
             {
-                healthBarPrefab = existingBoss.bossHealthBarPrefab;
-                if (debugLogs)
-                    Debug.Log($"[MiniBoss] Borrowed health bar prefab from BossEnemy for '{gameObject.name}'");
+                var existingBoss = FindFirstObjectByType<BossEnemy>();
+                if (existingBoss != null && existingBoss.bossHealthBarPrefab != null)
+                {
+                    _cachedBossHealthBarPrefab = existingBoss.bossHealthBarPrefab;
+                }
+
+                // Fallback: try Resources folder
+                if (_cachedBossHealthBarPrefab == null)
+                {
+                    _cachedBossHealthBarPrefab = Resources.Load<GameObject>("Healthbar");
+                    if (_cachedBossHealthBarPrefab == null)
+                        _cachedBossHealthBarPrefab = Resources.Load<GameObject>("Prefabs/Healthbar");
+                }
+
+                _cachedPrefabSearched = true;
             }
 
-            // Fallback: try Resources folder
-            if (healthBarPrefab == null)
-            {
-                healthBarPrefab = Resources.Load<GameObject>("Healthbar");
-                if (healthBarPrefab == null)
-                    healthBarPrefab = Resources.Load<GameObject>("Prefabs/Healthbar");
-
-                if (healthBarPrefab != null && debugLogs)
-                    Debug.Log($"[MiniBoss] Auto-loaded health bar prefab from Resources for '{gameObject.name}'");
-            }
+            healthBarPrefab = _cachedBossHealthBarPrefab;
         }
 
         // Always add health bar handler so it's ready when prefab is assigned
         if (GetComponent<MiniBossHealthBarHandler>() == null)
         {
             gameObject.AddComponent<MiniBossHealthBarHandler>();
-            if (debugLogs)
-                Debug.Log($"[MiniBoss] Auto-added MiniBossHealthBarHandler to '{gameObject.name}'");
         }
 
-        // Warn if health bar prefab is still not assigned
-        if (healthBarPrefab == null)
-        {
-            Debug.LogWarning($"[MiniBoss] healthBarPrefab not assigned on '{gameObject.name}'. " +
-                           "Assign a health bar prefab in the inspector or place 'Healthbar.prefab' in a Resources folder.");
-        }
-
-        if (autoHookDeathEvent)
-        {
-            if (debugLogs)
-                Debug.Log($"[MiniBoss] Attempting to auto-hook death event on '{gameObject.name}'...", gameObject);
-            TryAutoHookDeathEvent();
-        }
+        // DISABLED - TryAutoHookDeathEvent does expensive reflection on all components
+        // if (autoHookDeathEvent)
+        // {
+        //     TryAutoHookDeathEvent();
+        // }
+        // Instead: Hook death manually in EnemyController or call NotifyKilled() directly
 
         // Apply aggressive behavior immediately
         if (aggressiveBehavior)
@@ -203,6 +202,10 @@ public class MiniBoss : MonoBehaviour
             ApplyAggressiveBehavior();
         }
     }
+
+    // PERFORMANCE: Cache FindObjectOfType results
+    private static GameObject _cachedBossHealthBarPrefab;
+    private static bool _cachedPrefabSearched = false;
 
     void OnEnable()
     {
@@ -800,7 +803,7 @@ public class MiniBoss : MonoBehaviour
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             if (debugLogs)
                 Debug.Log($"[MiniBoss] Auto-hook death event attempt finished on '{gameObject.name}'. " +
@@ -1317,7 +1320,7 @@ public class MiniBoss : MonoBehaviour
                 if (lm == null)
                 {
                     // fallback: find any component of this type in scene
-                    lm = UnityEngine.Object.FindObjectOfType(lootManagerType) as Component;
+                    lm = UnityEngine.Object.FindFirstObjectByType(lootManagerType) as Component;
                 }
 
                 if (lm != null)
@@ -1366,7 +1369,7 @@ public class MiniBoss : MonoBehaviour
             {
                 var gmInstProp = gmType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
                 if (gmInstProp != null) gm = gmInstProp.GetValue(null, null) as Component;
-                if (gm == null) gm = UnityEngine.Object.FindObjectOfType(gmType) as Component;
+                if (gm == null) gm = UnityEngine.Object.FindFirstObjectByType(gmType) as Component;
 
                 if (gm != null)
                 {

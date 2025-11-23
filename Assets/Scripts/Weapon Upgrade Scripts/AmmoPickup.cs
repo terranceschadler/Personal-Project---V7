@@ -212,6 +212,6 @@ public class AmmoPickup : MonoBehaviour
         GUI.Label(new Rect(10, Screen.height - 60, 400, 20), 
             $"<color=yellow>Ammo Pickups Collected: {totalCollected}</color>");
         GUI.Label(new Rect(10, Screen.height - 40, 400, 20), 
-            $"<color=cyan>Active Pickups: {FindObjectsOfType<AmmoPickup>().Length}</color>");
+            $"<color=cyan>Active Pickups: {FindObjectsByType<AmmoPickup>(FindObjectsSortMode.None).Length}</color>");
     }
 }

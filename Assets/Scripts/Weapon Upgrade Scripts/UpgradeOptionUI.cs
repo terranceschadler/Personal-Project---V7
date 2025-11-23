@@ -190,7 +190,7 @@ public class UpgradeOptionUI : MonoBehaviour
         nameText.enableAutoSizing = true; // Auto-size to fit
         nameText.fontSizeMin = 28;
         nameText.fontSizeMax = nameFontSize;
-        nameText.enableWordWrapping = false; // No wrapping - auto-size instead
+        nameText.textWrappingMode = TMPro.TextWrappingModes.NoWrap; // No wrapping - auto-size instead
         RectTransform nameRect = nameObj.GetComponent<RectTransform>();
         nameRect.anchorMin = new Vector2(0.5f, 1f);
         nameRect.anchorMax = new Vector2(0.5f, 1f);
@@ -208,7 +208,7 @@ public class UpgradeOptionUI : MonoBehaviour
         descriptionText.enableAutoSizing = true; // Auto-size to fit
         descriptionText.fontSizeMin = 24; // Minimum readable size
         descriptionText.fontSizeMax = descriptionFontSize;
-        descriptionText.enableWordWrapping = true; // Allow wrapping for long descriptions
+        descriptionText.textWrappingMode = TMPro.TextWrappingModes.Normal; // Allow wrapping for long descriptions
         RectTransform descRect = descObj.GetComponent<RectTransform>();
         descRect.anchorMin = new Vector2(0.5f, 0f);
         descRect.anchorMax = new Vector2(0.5f, 1f);

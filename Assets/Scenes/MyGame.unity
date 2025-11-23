@@ -2426,6 +2426,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 448189477089601383, guid: cb069310e6cc3bd49ad52cf06bc5e064, type: 3}
+      propertyPath: debugLogs
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 448189477089601383, guid: cb069310e6cc3bd49ad52cf06bc5e064, type: 3}
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
@@ -3383,14 +3387,14 @@ MonoBehaviour:
   shotgunDropPrefab: {fileID: 94174554850615400, guid: 2fae1dfbcd098404899860bbe9949d8f, type: 3}
   machinegunDropPrefab: {fileID: 94174554850615400, guid: e11237e35d7fba44abb2fe0b0aeae638, type: 3}
   rocketDropPrefab: {fileID: 94174554850615400, guid: 7f27c3ded5558e840ae07b577a918ab0, type: 3}
-  weaponDropChance: 1
+  weaponDropChance: 0
   helicopterPartDropChance: 0.75
   secondDropOffset: {x: 0.75, y: 0, z: 0.75}
   maxHealthPickupPrefab: {fileID: 6441928423980564283, guid: defe7e944ff3be643bc95304bb708c46, type: 3}
   maxHealthPickupDropChance: 1
   maxHealthPickupOffset: {x: -0.75, y: 0, z: -0.75}
-  epicWeaponUpgradePrefab: {fileID: 0}
-  rareWeaponUpgradePrefab: {fileID: 0}
+  epicWeaponUpgradePrefab: {fileID: 846759565602956284, guid: f02aeb3294c4fb8429c4516208c0a800, type: 3}
+  rareWeaponUpgradePrefab: {fileID: 846759565602956284, guid: c2ae22d04ef8b9e40af57a1ac576e599, type: 3}
   weaponUpgradeDropChance: 0.7
   weaponUpgradeOffset: {x: 0, y: 0, z: -0.75}
   helicopterPartPrefab: {fileID: 0}
@@ -3781,63 +3785,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9b04fc1a744a6dc468ae9d0540713b28, type: 3}
---- !u!1001 &3242088771841324823
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 7162652531693402662, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_Name
-      value: Boss Mini
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 26.49871
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -0.2513
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7256488411169206413, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 06ddff64045e88e4bb00417d9d452b08, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -3863,4 +3810,3 @@ SceneRoots:
   - {fileID: 2127934814}
   - {fileID: 1240049132}
   - {fileID: 1711508421}
-  - {fileID: 3242088771841324823}
