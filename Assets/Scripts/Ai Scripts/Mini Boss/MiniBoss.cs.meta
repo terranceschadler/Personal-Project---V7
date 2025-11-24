@@ -3,7 +3,9 @@ guid: caaf1401b5400a348a3f837a17191b7d
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - coinPrefab: {fileID: 2734191600132634701, guid: 040793db376723149868613c2f37a640, type: 3}
+  - healthBarPrefab: {fileID: 5536732270004585410, guid: 53bfcd19f4a0c68459cc98e20a4401eb, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
