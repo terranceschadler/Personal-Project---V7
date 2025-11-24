@@ -198,7 +198,7 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         float frameTime = Time.deltaTime * 1000f; // Convert to milliseconds
-        
+
         // DIAGNOSTIC: Check if game is paused
         if (Time.timeScale != 1f)
         {
@@ -206,7 +206,7 @@ public class PlayerController : MonoBehaviour
             if (Time.timeScale == 0f)
                 Debug.LogWarning($"[PlayerController] TimeScale is {Time.timeScale} - movement paused!", this);
         }
-        
+
         // DIAGNOSTIC: Detect frame spikes (hitching)
         if (frameTime > 50f) // Over 50ms = noticeable hitch
         {
@@ -216,8 +216,13 @@ public class PlayerController : MonoBehaviour
         {
             Debug.LogWarning($"[PlayerController] Long frame: {frameTime:F1}ms (frame {Time.frameCount})", this);
         }
-        
-        HandleMovement(); // includes dash evaluation + application
+
+        // Cache input once per frame for performance
+        _cachedMousePos = Input.mousePosition;
+        _cachedFire1 = Input.GetButton("Fire1");
+        _cachedRightTrigger = ReadRightTrigger01();
+
+        HandleMovement(); // includes dash evaluation + application (has its own deltaTime check)
         AimWithPriorityAndSnap();
 
         // Mouse (Fire1) OR Right Trigger
@@ -640,9 +645,9 @@ public class PlayerController : MonoBehaviour
         if (mainCamera == null) return;
         int mask = (groundLayer.value == 0) ? Physics.DefaultRaycastLayers : groundLayer.value;
 
-        // Use cached mouse position and limited raycast distance (better editor performance)
+        // Use cached mouse position and reasonable raycast distance (better editor performance than Infinity)
         Ray ray = mainCamera.ScreenPointToRay(_cachedMousePos);
-        if (Physics.Raycast(ray, out RaycastHit hit, 200f, mask, QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(ray, out RaycastHit hit, 1000f, mask, QueryTriggerInteraction.Ignore))
         {
             Vector3 targetPosition = hit.point;
             targetPosition.y = transform.position.y;
