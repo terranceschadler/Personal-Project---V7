@@ -121,7 +121,7 @@ public class PlayerController : MonoBehaviour
 
     // --- Grounding perf helpers (NonAlloc + throttling) ---
     private RaycastHit[] _groundHits = new RaycastHit[2];
-    private int _groundProbeInterval = 2;     // probe every Nth frame
+    private int _groundProbeInterval = 3;     // probe every Nth frame (increased for editor performance)
     private int _groundProbeCountdown = 0;
     private Vector3 _lastGroundPoint;
     private Vector3 _lastGroundNormal = Vector3.up;
@@ -130,6 +130,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 _cachedMousePos;
     private bool _cachedFire1;
     private float _cachedRightTrigger;
+    private Vector2 _cachedMoveInput;
 
     private void DLog(string msg) { if (debugLogs) Debug.Log(msg, this); }
     private void DLogFormat(string fmt, params object[] args) { if (debugLogs) Debug.LogFormat(this, fmt, args); }
@@ -197,30 +198,25 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        float frameTime = Time.deltaTime * 1000f; // Convert to milliseconds
-
-        // DIAGNOSTIC: Check if game is paused
-        if (Time.timeScale != 1f)
+        // DIAGNOSTIC: Only run diagnostics when debug logging is enabled (expensive in editor)
+        if (debugLogs)
         {
-            // Only log once when paused starts
-            if (Time.timeScale == 0f)
+            float frameTime = Time.deltaTime * 1000f;
+
+            if (Time.timeScale != 1f && Time.timeScale == 0f)
                 Debug.LogWarning($"[PlayerController] TimeScale is {Time.timeScale} - movement paused!", this);
+
+            if (frameTime > 50f)
+                Debug.LogError($"[PlayerController] FRAME SPIKE! {frameTime:F1}ms (frame {Time.frameCount})", this);
+            else if (frameTime > 33f)
+                Debug.LogWarning($"[PlayerController] Long frame: {frameTime:F1}ms (frame {Time.frameCount})", this);
         }
 
-        // DIAGNOSTIC: Detect frame spikes (hitching)
-        if (frameTime > 50f) // Over 50ms = noticeable hitch
-        {
-            Debug.LogError($"[PlayerController] FRAME SPIKE DETECTED! Frame took {frameTime:F1}ms (frame {Time.frameCount})", this);
-        }
-        else if (frameTime > 33f) // Over 33ms = under 30 FPS
-        {
-            Debug.LogWarning($"[PlayerController] Long frame: {frameTime:F1}ms (frame {Time.frameCount})", this);
-        }
-
-        // Cache input once per frame for performance
+        // Cache ALL input once per frame for performance (eliminates redundant Input calls)
         _cachedMousePos = Input.mousePosition;
         _cachedFire1 = Input.GetButton("Fire1");
         _cachedRightTrigger = ReadRightTrigger01();
+        _cachedMoveInput = ReadMoveInputDirect();
 
         HandleMovement(); // includes dash evaluation + application (has its own deltaTime check)
         AimWithPriorityAndSnap();
@@ -530,7 +526,14 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
+    // Returns cached move input (performance optimized - called by HandleMovement)
     Vector2 GetMoveInput()
+    {
+        return _cachedMoveInput;
+    }
+
+    // Actually reads move input from Input system (called once per frame in Update)
+    Vector2 ReadMoveInputDirect()
     {
         float h = 0f;
         float v = 0f;
