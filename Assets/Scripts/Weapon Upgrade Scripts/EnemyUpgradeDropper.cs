@@ -107,19 +107,18 @@ public class EnemyUpgradeDropper : MonoBehaviour
 
     private bool ShouldDrop()
     {
-        // Check if this is a boss (based on name or tag)
-        bool isBoss = gameObject.name.Contains("Boss") ||
-                      gameObject.CompareTag("Boss") ||
-                      gameObject.name.Contains("Mini");
+        // Check if this is a FULL boss (NOT mini boss)
+        bool isBoss = (gameObject.name.Contains("Boss") && !gameObject.name.Contains("Mini")) ||
+                      gameObject.CompareTag("Boss");
 
-        // Always drop from bosses if enabled
+        // Always drop from full bosses if enabled
         if (alwaysDropFromBosses && isBoss)
         {
             if (debugLogs) Debug.Log($"[EnemyUpgradeDropper] {gameObject.name} is a boss - GUARANTEED drop!");
             return true;
         }
 
-        // Roll for random drop
+        // Roll for random drop (applies to mini bosses and regular enemies)
         float roll = Random.value;
         bool shouldDrop = roll <= dropChance;
 

@@ -47,7 +47,6 @@ public class EnhancedBullet : MonoBehaviour, IBullet
     private float shockDamage;
     
     // Critical hit
-    private bool isCritical;
     
     // Runtime
     private Rigidbody rb;
@@ -76,7 +75,6 @@ public class EnhancedBullet : MonoBehaviour, IBullet
         // Calculate critical hit
         if (Random.value < stats.critChance)
         {
-            isCritical = true;
             damage *= stats.critDamageMultiplier;
         }
         

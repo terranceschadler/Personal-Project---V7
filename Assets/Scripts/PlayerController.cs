@@ -197,14 +197,26 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // Performance: Skip if deltaTime is invalid (can happen in editor)
-        if (Time.deltaTime <= 0f) return;
-
-        // Cache input once per frame for performance
-        _cachedMousePos = Input.mousePosition;
-        _cachedFire1 = Input.GetButton("Fire1");
-        _cachedRightTrigger = ReadRightTrigger01();
-
+        float frameTime = Time.deltaTime * 1000f; // Convert to milliseconds
+        
+        // DIAGNOSTIC: Check if game is paused
+        if (Time.timeScale != 1f)
+        {
+            // Only log once when paused starts
+            if (Time.timeScale == 0f)
+                Debug.LogWarning($"[PlayerController] TimeScale is {Time.timeScale} - movement paused!", this);
+        }
+        
+        // DIAGNOSTIC: Detect frame spikes (hitching)
+        if (frameTime > 50f) // Over 50ms = noticeable hitch
+        {
+            Debug.LogError($"[PlayerController] FRAME SPIKE DETECTED! Frame took {frameTime:F1}ms (frame {Time.frameCount})", this);
+        }
+        else if (frameTime > 33f) // Over 33ms = under 30 FPS
+        {
+            Debug.LogWarning($"[PlayerController] Long frame: {frameTime:F1}ms (frame {Time.frameCount})", this);
+        }
+        
         HandleMovement(); // includes dash evaluation + application
         AimWithPriorityAndSnap();
 

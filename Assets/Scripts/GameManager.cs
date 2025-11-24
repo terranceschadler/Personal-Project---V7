@@ -714,7 +714,7 @@ public class GameManager : MonoBehaviour
         GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
         if (playerObject == null)
         {
-            PlayerWeaponController pwc = FindObjectOfType<PlayerWeaponController>();
+            PlayerWeaponController pwc = FindFirstObjectByType<PlayerWeaponController>();
             if (pwc != null) playerObject = pwc.gameObject;
         }
 
@@ -1016,8 +1016,7 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
         
         // CRITICAL: Trigger NavMesh baking using your existing NavMeshRuntimeBaker
-        bool navMeshBaked = false;
-        NavMeshRuntimeBaker navBaker = FindObjectOfType<NavMeshRuntimeBaker>();
+        NavMeshRuntimeBaker navBaker = FindFirstObjectByType<NavMeshRuntimeBaker>();
         
         if (navBaker != null)
         {
@@ -1037,7 +1036,6 @@ public class GameManager : MonoBehaviour
             if (navBaker.BakeCompleted)
             {
                 DLog($"[GameManager] NavMesh bake completed in {waitTime:F1}s");
-                navMeshBaked = true;
             }
             else
             {
@@ -1071,7 +1069,7 @@ public class GameManager : MonoBehaviour
     {
         // This method is now handled in InitializeAfterSceneLoad
         // Keeping it for backward compatibility
-        NavMeshRuntimeBaker navBaker = FindObjectOfType<NavMeshRuntimeBaker>();
+        NavMeshRuntimeBaker navBaker = FindFirstObjectByType<NavMeshRuntimeBaker>();
         if (navBaker != null)
         {
             DLog("[GameManager] Triggering NavMeshRuntimeBaker...");

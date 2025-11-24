@@ -130,7 +130,7 @@ public class WeaponStatsDisplay : MonoBehaviour
         if (weaponController == null)
         {
             if (showDebugInfo) Debug.Log("[WeaponStatsDisplay] Searching for PlayerWeaponController...");
-            weaponController = FindObjectOfType<PlayerWeaponController>();
+            weaponController = FindFirstObjectByType<PlayerWeaponController>();
         }
         
         // If still not found, wait a bit and try again
@@ -138,7 +138,7 @@ public class WeaponStatsDisplay : MonoBehaviour
         {
             if (showDebugInfo) Debug.Log("[WeaponStatsDisplay] Not found, waiting 0.5s and trying again...");
             yield return new WaitForSeconds(0.5f);
-            weaponController = FindObjectOfType<PlayerWeaponController>();
+            weaponController = FindFirstObjectByType<PlayerWeaponController>();
         }
         
         // If STILL not found, wait even longer (scene might be loading)
@@ -146,7 +146,7 @@ public class WeaponStatsDisplay : MonoBehaviour
         {
             if (showDebugInfo) Debug.Log("[WeaponStatsDisplay] Still not found, waiting 1.0s more...");
             yield return new WaitForSeconds(1.0f);
-            weaponController = FindObjectOfType<PlayerWeaponController>();
+            weaponController = FindFirstObjectByType<PlayerWeaponController>();
         }
         
         if (weaponController == null)
@@ -394,7 +394,7 @@ public class WeaponStatsDisplay : MonoBehaviour
     [ContextMenu("Check for Duplicates")]
     void CheckForDuplicates()
     {
-        WeaponStatsDisplay[] displays = FindObjectsOfType<WeaponStatsDisplay>();
+        WeaponStatsDisplay[] displays = FindObjectsByType<WeaponStatsDisplay>(FindObjectsSortMode.None);
         Debug.Log($"=== WeaponStatsDisplay Diagnostic ===");
         Debug.Log($"Total instances found: {displays.Length}");
         

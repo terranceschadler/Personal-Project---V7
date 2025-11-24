@@ -30,7 +30,7 @@ public class UpgradeSelectionUI : MonoBehaviour
 
     private void Awake()
     {
-        upgradeSystem = FindObjectOfType<IntegratedUpgradeSystem>();
+        upgradeSystem = FindFirstObjectByType<IntegratedUpgradeSystem>();
         if (selectionPanel != null) selectionPanel.SetActive(false);
     }
 
