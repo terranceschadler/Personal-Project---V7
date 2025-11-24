@@ -126,6 +126,11 @@ public class PlayerController : MonoBehaviour
     private Vector3 _lastGroundPoint;
     private Vector3 _lastGroundNormal = Vector3.up;
 
+    // --- Input caching (performance: read once per frame) ---
+    private Vector3 _cachedMousePos;
+    private bool _cachedFire1;
+    private float _cachedRightTrigger;
+
     private void DLog(string msg) { if (debugLogs) Debug.Log(msg, this); }
     private void DLogFormat(string fmt, params object[] args) { if (debugLogs) Debug.LogFormat(this, fmt, args); }
 
@@ -216,8 +221,8 @@ public class PlayerController : MonoBehaviour
         AimWithPriorityAndSnap();
 
         // Mouse (Fire1) OR Right Trigger
-        bool wantsMouseFire = Input.GetButton("Fire1");
-        bool wantsRT = ReadRightTrigger01() > rtFireThreshold;
+        bool wantsMouseFire = _cachedFire1;
+        bool wantsRT = _cachedRightTrigger > rtFireThreshold;
 
         if ((wantsMouseFire || wantsRT) && Time.time >= nextFireTime && weaponUpgradeController != null)
         {
@@ -264,7 +269,7 @@ public class PlayerController : MonoBehaviour
         if (isInvulnerable && Time.time >= invulnEndTime)
             isInvulnerable = false;
 
-        _lastMousePos = Input.mousePosition;
+        _lastMousePos = _cachedMousePos;
     }
 
     // ---------------- MOVEMENT / DASH ----------------
@@ -526,7 +531,7 @@ public class PlayerController : MonoBehaviour
         float v = 0f;
 
 #if ENABLE_INPUT_SYSTEM
-        // New Input System
+        // New Input System - read keyboard directly
         if (UnityEngine.InputSystem.Keyboard.current != null)
         {
             var key = UnityEngine.InputSystem.Keyboard.current;
@@ -536,19 +541,22 @@ public class PlayerController : MonoBehaviour
             if (key.sKey.isPressed || key.downArrowKey.isPressed) v -= 1f;
         }
 #else
-        // Old Input Manager
+        // Old Input Manager - optimized: use GetAxisRaw OR direct key checks, not both
         h = Input.GetAxisRaw("Horizontal");
         v = Input.GetAxisRaw("Vertical");
 
-        if (Mathf.Approximately(h, 0f) && Mathf.Approximately(v, 0f))
+        // Only check direct keys if axes are not configured (fallback)
+        if (h == 0f && v == 0f)
         {
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) h += 1f;
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) h -= 1f;
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) v += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) v -= 1f;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) h = 1f;
+            else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) h = -1f;
+
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) v = 1f;
+            else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) v = -1f;
         }
 #endif
 
+        // Gamepad overrides keyboard (cached via GamepadInput)
         Vector2 ls = GamepadInput.LeftStick;
         if (ls.sqrMagnitude > 0.01f)
         {
@@ -564,9 +572,8 @@ public class PlayerController : MonoBehaviour
     {
         float now = Time.unscaledTime;
 
-        // Mouse movement detection
-        Vector3 mp = Input.mousePosition;
-        float mouseDeltaSq = (mp - _lastMousePos).sqrMagnitude;
+        // Mouse movement detection (use cached mouse position)
+        float mouseDeltaSq = (_cachedMousePos - _lastMousePos).sqrMagnitude;
         if (mouseDeltaSq >= mouseMovePixelsThreshold * mouseMovePixelsThreshold)
             _mousePriorityUntil = now + inputPriorityGrace;
 
@@ -633,8 +640,9 @@ public class PlayerController : MonoBehaviour
         if (mainCamera == null) return;
         int mask = (groundLayer.value == 0) ? Physics.DefaultRaycastLayers : groundLayer.value;
 
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, mask, QueryTriggerInteraction.Ignore))
+        // Use cached mouse position and limited raycast distance (better editor performance)
+        Ray ray = mainCamera.ScreenPointToRay(_cachedMousePos);
+        if (Physics.Raycast(ray, out RaycastHit hit, 200f, mask, QueryTriggerInteraction.Ignore))
         {
             Vector3 targetPosition = hit.point;
             targetPosition.y = transform.position.y;

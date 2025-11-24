@@ -12,6 +12,8 @@ using UnityEngine.InputSystem; // Gamepad
 ///     RightStickHorizontal, RightStickVertical (Invert ON on Y)
 ///     Triggers (combined: LT negative, RT positive)
 /// Buttons map to standard JoystickButton indices (Xbox layout).
+///
+/// Performance: Frame-based caching prevents redundant Input.GetAxis calls
 /// </summary>
 public static class GamepadInput
 {
@@ -22,15 +24,20 @@ public static class GamepadInput
     private const string AXIS_RY = "RightStickVertical";
     private const string AXIS_TRIG = "Triggers"; // combined LT..RT = -1..+1
 
+    // ---- Frame caching to prevent redundant Input calls ----
+    private static int _cachedFrame = -1;
+    private static Vector2 _cachedLeftStick;
+    private static Vector2 _cachedRightStick;
+    private static float _cachedLT;
+    private static float _cachedRT;
+
     // ---------- Sticks ----------
     public static Vector2 LeftStick
     {
         get
         {
-#if ENABLE_INPUT_SYSTEM
-            if (Gamepad.current != null) return Gamepad.current.leftStick.ReadValue();
-#endif
-            return new Vector2(Axis(AXIS_LX), Axis(AXIS_LY));
+            UpdateCache();
+            return _cachedLeftStick;
         }
     }
 
@@ -38,10 +45,8 @@ public static class GamepadInput
     {
         get
         {
-#if ENABLE_INPUT_SYSTEM
-            if (Gamepad.current != null) return Gamepad.current.rightStick.ReadValue();
-#endif
-            return new Vector2(Axis(AXIS_RX), Axis(AXIS_RY));
+            UpdateCache();
+            return _cachedRightStick;
         }
     }
 
@@ -51,11 +56,8 @@ public static class GamepadInput
     {
         get
         {
-#if ENABLE_INPUT_SYSTEM
-            if (Gamepad.current != null) return Mathf.Clamp01(Gamepad.current.leftTrigger.ReadValue());
-#endif
-            float t = Axis(AXIS_TRIG); // -1..+1
-            return Mathf.Clamp01(Mathf.Max(0f, -t));   // negative side = LT
+            UpdateCache();
+            return _cachedLT;
         }
     }
 
@@ -64,11 +66,8 @@ public static class GamepadInput
     {
         get
         {
-#if ENABLE_INPUT_SYSTEM
-            if (Gamepad.current != null) return Mathf.Clamp01(Gamepad.current.rightTrigger.ReadValue());
-#endif
-            float t = Axis(AXIS_TRIG); // -1..+1
-            return Mathf.Clamp01(Mathf.Max(0f, t));   // positive side = RT
+            UpdateCache();
+            return _cachedRT;
         }
     }
 
@@ -77,11 +76,8 @@ public static class GamepadInput
     {
         get
         {
-#if ENABLE_INPUT_SYSTEM
-            if (Gamepad.current != null)
-                return Mathf.Clamp((RT - LT), -1f, 1f);
-#endif
-            return Axis(AXIS_TRIG);
+            UpdateCache();
+            return Mathf.Clamp(_cachedRT - _cachedLT, -1f, 1f);
         }
     }
 
@@ -121,6 +117,40 @@ public static class GamepadInput
                    Mathf.Abs(Axis(AXIS_TRIG)) > 0.01f;
 #endif
         }
+    }
+
+    // ---------- Frame-based cache update ----------
+    private static void UpdateCache()
+    {
+        int currentFrame = Time.frameCount;
+        if (_cachedFrame == currentFrame) return; // Already cached this frame
+
+        _cachedFrame = currentFrame;
+
+#if ENABLE_INPUT_SYSTEM
+        if (Gamepad.current != null)
+        {
+            _cachedLeftStick = Gamepad.current.leftStick.ReadValue();
+            _cachedRightStick = Gamepad.current.rightStick.ReadValue();
+            _cachedLT = Mathf.Clamp01(Gamepad.current.leftTrigger.ReadValue());
+            _cachedRT = Mathf.Clamp01(Gamepad.current.rightTrigger.ReadValue());
+        }
+        else
+        {
+            _cachedLeftStick = Vector2.zero;
+            _cachedRightStick = Vector2.zero;
+            _cachedLT = 0f;
+            _cachedRT = 0f;
+        }
+#else
+        // Legacy Input Manager
+        _cachedLeftStick = new Vector2(Axis(AXIS_LX), Axis(AXIS_LY));
+        _cachedRightStick = new Vector2(Axis(AXIS_RX), Axis(AXIS_RY));
+
+        float trigAxis = Axis(AXIS_TRIG);
+        _cachedLT = Mathf.Clamp01(Mathf.Max(0f, -trigAxis));  // negative side = LT
+        _cachedRT = Mathf.Clamp01(Mathf.Max(0f, trigAxis));   // positive side = RT
+#endif
     }
 
     // ---------- helpers ----------
